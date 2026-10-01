@@ -2030,6 +2030,8 @@ try:
             if _bot is not None:
                 _bot.meld_trade(tid)         # bericht met de tien knoppen
         _koppeling.bij_nieuwe_trade.append(_na_nieuwe_trade)
+        if _bot is not None:
+            _koppeling.bij_waarschuwing.append(_bot.meld_tekst)   # o.a. verkeerd MT5-account
         if _sig is not None:
             _koppeling.na_ronde.append(_sig.na_ronde)
 except Exception as _e:                                    # pragma: no cover

@@ -19,6 +19,7 @@ Instellingen in journal_config.json:
 Wordt elke halve minuut herlezen: token invullen = binnen 30 sec actief.
 """
 
+import html
 import json
 import re
 import os
@@ -220,6 +221,16 @@ def meld_trade(tid):
 
 def stuur(c, tekst):
     api(c["token"], "sendMessage", {"chat_id": c["chat_id"], "text": tekst, "parse_mode": "HTML"})
+
+
+def meld_tekst(tekst):
+    """Los bericht (bv. waarschuwing van de MT5-koppeling). False als de bot niet
+    ingesteld is."""
+    c = cfg()
+    if not (c["aan"] and c["token"] and c["chat_id"]):
+        return False
+    stuur(c, "⚠️ " + html.escape(tekst))
+    return True
 
 
 # ------------------------------------------------------------------ ontvangen

@@ -1,0 +1,45 @@
+VPS-UPDATE-7 - account-controle MT5 (geen demo-trades meer in je journal)
+==========================================================================
+Waarom: straks draaien er twee MetaTraders op de VPS (live voor jou, Vantage-demo voor
+het station). De journal mag alleen trades van je LIVE-account loggen.
+
+Wat er verandert:
+- Nieuwe instelling mt5 > account_login (je live-accountnummer). Zit er in MT5 een ander
+  account, dan logt de journal NIETS (geen trades, geen saldo, geen SL/TP, geen
+  marktdata, en de signaalwachter pauzeert). Je krijgt één Telegram-bericht via de
+  journal-bot plus een melding in het log en bij het MT5-lampje. Log je weer in op
+  live, dan gaat alles vanzelf verder en krijg je het bericht "weer goed".
+- Elke ronde (30 sec) wordt opnieuw gecontroleerd, dus ook als je binnen MT5 van
+  account wisselt.
+- Staat terminal_pad ingesteld en werkt dat pad niet, dan verbindt de journal NIET
+  meer met "de MT5 die openstaat" (dat kon de demo zijn). Je ziet dan de melding
+  "terminal_pad werkt niet".
+- Zonder account_login werkt alles zoals vroeger, met een waarschuwing in het log.
+  De journal controleert het account dan niet.
+
+Dit zip bouwt voort op UPDATE-4, 5 en 6. Doe die eerst, in volgorde.
+
+Installeren op de VPS:
+1. Zet dit zip op de VPS en pak het uit OVER de journal-map heen
+   (C:\Users\Administrator\Pictures\CBR Journal\journal\journal), 'Alles vervangen'.
+2. Dubbelklik ZET-ACCOUNT-LOGIN.bat en typ je LIVE-accountnummer (alleen cijfers,
+   staat in MT5 links bij Navigator > Accounts). Er wordt eerst een backup van
+   journal_config.json gemaakt; alleen mt5 > account_login verandert.
+3. Sluit het START-JOURNAL-venster en dubbelklik START-JOURNAL.bat opnieuw.
+
+Controle:
+- Open mt5_koppeling.log in de journal-map. Goed is: "verbonden met MT5 (..., account …xyz)"
+  met de laatste 3 cijfers van je live-account, ZONDER de regel
+  "WAARSCHUWING: mt5 > account_login is niet ingesteld".
+- Optioneel (alleen in het weekend of zonder open trades): log in MT5 even in op de demo.
+  Binnen een minuut krijg je in Telegram "VERKEERD MT5-ACCOUNT ...". Log terug in op live
+  en je krijgt "MT5-account weer goed".
+- Test zonder MT5 (cmd in de journal-map):  python test_account_controle.py  -> ALLES GOED
+
+Let op: dit beschermt alleen vanaf nu. Trades die al eerder van een demo-account in de
+journal kwamen, worden hiermee niet opgespoord.
+
+Er zit geen database, config of screenshots in dit zip.
+Terug naar het oude gedrag: zet de vorige mt5_koppeling.py terug, of draai
+ZET-ACCOUNT-LOGIN.bat en laat het nummer leeg (dan staat de controle uit; het
+"geen terugval bij terminal_pad" blijft dan wel gelden).

@@ -47,7 +47,8 @@ STANDAARD = {
     "symbool": "XAUUSD+",         # voor de klok-check en de candles
     "symbool_bevat": "XAU",       # alleen trades op goud komen de journal in
     "broker_offset_uur": 3,       # reserve als de klok niet automatisch te bepalen is
-    "terminal_pad": "",           # leeg = de MT5 die open staat
+    "terminal_pad": "",           # leeg = de MT5 die open staat; gezet = alleen die terminal
+    "account_login": "",          # je live-accountnummer; ander account ingelogd = niets loggen
     "min_rr": 1.0,                # jouw RR-vloer, voor het TP-criterium
     "saldo_volgen": True,         # v2: journal-saldo altijd gelijk aan MT5-balans
     "match_marge_eur": 0.03,
@@ -413,6 +414,17 @@ class VerbindFout(Exception):
     pass
 
 
+class AccountFout(VerbindFout):
+    """Er is een ander MT5-account ingelogd dan account_login: niets loggen."""
+
+
+def _login_tekst(v):
+    """account_login mag als getal of tekst in de config staan."""
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    return str(v if v is not None else "").strip()
+
+
 class Koppeling:
     """Eén instantie per journal-proces. mt5 mag een nep-object zijn (tests)."""
 
@@ -425,6 +437,9 @@ class Koppeling:
         self.wekker = threading.Event()
         self.bij_nieuwe_trade = []        # callbacks(trade_id)
         self.na_ronde = []                # callbacks(koppeling), zelfde thread -> MT5 veilig
+        self.bij_waarschuwing = []        # callbacks(tekst), bv. Telegram
+        self.account_alarm = False        # nu een verkeerd account ingelogd (al gemeld)
+        self._zonder_controle_gemeld = False
         self.status = {
             "aan": True, "verbonden": False, "melding": "nog niet gestart",
             "laatste_ronde": None, "laatste_nieuw": None, "account": None,
@@ -452,23 +467,69 @@ class Koppeling:
             if os.path.isdir(pad):
                 pad = os.path.join(pad, "terminal64.exe")  # map i.p.v. het programma
         ok = mt5.initialize(pad) if pad else mt5.initialize()
-        if not ok and pad:
-            eerste = mt5.last_error() if hasattr(mt5, "last_error") else ""
-            ok = mt5.initialize()                        # dan de MT5 die al openstaat
-            if ok:
-                log(f"terminal_pad '{pad}' werkte niet ({eerste}); verbonden met de MT5 die openstaat")
         if not ok:
             fout = mt5.last_error() if hasattr(mt5, "last_error") else ""
+            if pad:
+                # bewust GEEN terugval naar "de MT5 die openstaat": dat kan de demo zijn
+                raise VerbindFout(f"terminal_pad werkt niet: '{pad}' {fout}. De journal "
+                                  "verbindt bewust niet met een andere MT5. Staat die MT5 "
+                                  "open? Klopt mt5 > terminal_pad in journal_config.json?")
             raise VerbindFout(f"MetaTrader 5 niet bereikbaar {fout}. Staat MT5 open "
                               "en ben je ingelogd bij Vantage?")
         acc = mt5.account_info()
-        if acc is None:
-            raise VerbindFout("MT5 draait, maar er is geen account ingelogd.")
+        try:
+            self.controleer_account(cfg, acc)
+        except VerbindFout:
+            try:
+                mt5.shutdown()
+            except Exception:
+                pass
+            raise
         self.verbonden = True
         self.status.update(verbonden=True, account=f"…{str(acc.login)[-3:]}",
                            server=getattr(acc, "server", None),
                            valuta=getattr(acc, "currency", None))
         log(f"verbonden met MT5 ({self.status['server']}, account {self.status['account']})")
+
+    def controleer_account(self, cfg, acc):
+        """Gooit AccountFout als er een ander account ingelogd is dan account_login.
+        Meldt (log + bij_waarschuwing) één keer bij het begin en één keer als het
+        weer goed is, niet elke ronde."""
+        if acc is None:
+            raise VerbindFout("MT5 draait, maar er is geen account ingelogd.")
+        verwacht = _login_tekst(cfg.get("account_login"))
+        ingelogd = _login_tekst(getattr(acc, "login", ""))
+        if not verwacht:
+            self.status["account_controle"] = ("uit: account_login niet ingesteld in "
+                                               "journal_config.json")
+            if not self._zonder_controle_gemeld:
+                self._zonder_controle_gemeld = True
+                log("WAARSCHUWING: mt5 > account_login is niet ingesteld; de journal "
+                    "controleert niet welk account er ingelogd is")
+            return
+        if ingelogd != verwacht:
+            tekst = (f"VERKEERD MT5-ACCOUNT: verwacht …{verwacht[-3:]}, ingelogd "
+                     f"…{ingelogd[-3:]} (server {getattr(acc, 'server', '?')}). Niets gelogd.")
+            self.status["account_controle"] = "verkeerd account"
+            if not self.account_alarm:
+                self.account_alarm = True
+                log(tekst)
+                self._waarschuw(tekst + " Log in MT5 in op je live-account; de journal "
+                                "gaat dan vanzelf verder.")
+            raise AccountFout(tekst)
+        self.status["account_controle"] = "aan: juiste account"
+        if self.account_alarm:
+            self.account_alarm = False
+            tekst = f"MT5-account weer goed (…{ingelogd[-3:]}). De journal logt weer."
+            log(tekst)
+            self._waarschuw(tekst)
+
+    def _waarschuw(self, tekst):
+        for cb in list(self.bij_waarschuwing):
+            try:
+                cb(tekst)
+            except Exception as e:
+                log(f"waarschuwing versturen mislukt: {e}")
 
     def verbreek(self):
         if self.mt5 is not None and self.verbonden:
@@ -521,7 +582,10 @@ class Koppeling:
             self.status["melding"] = "uitgezet in journal_config.json"
             return []
         if not self.verbonden:
-            self.verbind(cfg)
+            self.verbind(cfg)                # controleert het account al
+        else:
+            # account kan in dezelfde terminal gewisseld zijn: elke ronde opnieuw
+            self.controleer_account(cfg, self.mt5.account_info())
         mt5 = self.mt5
         ti = mt5.terminal_info() if hasattr(mt5, "terminal_info") else None
         if ti is not None and not getattr(ti, "connected", True):
