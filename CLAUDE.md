@@ -6,7 +6,8 @@ Hoort bij CBR Station (`C:\Dev\cbr-station`, zie daar CLAUDE.md). Het station le
 ## Werkafspraken
 - Nederlands, concreet. Marijn is geen programmeur: Windows-stappen met exacte commando's.
 - Noem onduidelijkheden eerst. Eerlijk over wat data bewijst.
-- Updates naar de VPS als zip met alleen code (`VPS-UPDATE-N-naam.zip` + `LEES-MIJ-UPDATE-N.txt`). NOOIT `cbr_journal.db`, `signalen.db`, `journal_config.json`, screenshots of andere data overschrijven; configwijzigingen via een klein script dat alleen de nodige sleutels zet (met backup).
+- **Werkwijze nu (vanaf 1 okt 2026, VPS wordt opnieuw geïnstalleerd):** geen update-zips of LEES-MIJ-UPDATE-bestanden meer. Na elke wijziging die werkt: meteen committen hier, daarna de code kopiëren naar `C:\Users\marij\OneDrive\Afbeeldingen\AI AGENTS\journal` met `git archive HEAD | tar -x -C "/c/Users/marij/OneDrive/Afbeeldingen/AI AGENTS/journal"` (alleen getrackte code, geen data). Nooit los in `AI AGENTS` zelf zetten: dat is de map van het station (main.py, venster.py en CLAUDE.md bestaan daar ook).
+- Later, als de VPS weer bijgewerkt wordt: updates als zip met alleen code (`VPS-UPDATE-N-naam.zip` + `LEES-MIJ-UPDATE-N.txt`). NOOIT `cbr_journal.db`, `signalen.db`, `journal_config.json`, screenshots of andere data overschrijven; configwijzigingen via een klein script dat alleen de nodige sleutels zet (met backup).
 - Geen sleutels/tokens in code of chat (staan in journal_config.json op de machine zelf; niet uitlezen).
 - Laatste updates: 4 (donker thema + signaaloordeel), 5 (venster blokken via venster.py), 6 (detector-knoppen), 7 (account-controle MT5). Nog niet allemaal op de VPS.
 
