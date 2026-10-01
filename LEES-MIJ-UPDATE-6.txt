@@ -1,0 +1,9 @@
+VPS-UPDATE-6 - detector-knoppen
+Nieuwe setup_detector.py met drie knoppen (in journal_config.json > signalen, of via het board panel van het station):
+  eis_50_impuls  (false = 50% van de impuls raken maakt de setup niet meer ongeldig)
+  eis_bos        (false = geen break of structure nodig, entry direct na de sweep)
+  entry_pct      (0.5 = midden tussen pullback en sweep, 0.3 = dichter bij de BOS)
+1. Pak uit over de journal-map ('Alles vervangen').
+2. Zet in journal_config.json onder "signalen":  "eis_50_impuls": false,   (of gebruik later het board panel)
+3. Herstart START-JOURNAL.bat.
+Zonder deze regels werkt alles zoals voorheen.

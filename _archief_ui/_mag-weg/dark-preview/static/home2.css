@@ -1,0 +1,179 @@
+/* Homepage v2 (29 sep 2026) — bouwt voort op style.css (zelfde tokens). */
+.home2 { padding-bottom: 60px; }
+.home2 .section-title { scroll-margin-top: 70px; }
+.h2-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+.h2-grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+.h2-grid2 > .panel, .h2-grid3 > .panel { margin: 0; min-width: 0; }
+.h2-chart { position: relative; height: 230px; }
+.home2 .chart-panel { margin-bottom: 0; }
+.home2 > .chart-panel { margin-bottom: 16px; }
+
+/* hero */
+.h2-hero { padding: 20px 22px 14px; margin-bottom: 16px; }
+.h2-hero-kop { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+.h2-label { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); display: flex; gap: 10px; align-items: center; }
+.h2-mt5 { text-transform: none; letter-spacing: 0; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; color: var(--text-dim); }
+.h2-mt5 .stip { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.h2-mt5 .stip.aan { background: var(--c-green); box-shadow: 0 0 0 3px rgba(8,153,129,.18); }
+.h2-saldo { font-size: 38px; font-weight: 800; letter-spacing: -.5px; line-height: 1.1; margin: 4px 0; font-variant-numeric: tabular-nums; }
+.h2-sub { display: flex; flex-wrap: wrap; gap: 6px; color: var(--text-dim); font-size: 13px; }
+.h2-sub .dot { color: var(--muted); }
+.h2-hero-rechts { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.h2-tabs { display: inline-flex; gap: 2px; background: var(--bg-alt); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.h2-tabs button { border: 0; background: transparent; padding: 6px 10px; border-radius: 6px; font: inherit; font-size: 12px; color: var(--text-dim); cursor: pointer; }
+.h2-tabs button.on { background: var(--panel); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); font-weight: 600; }
+.h2-curve { position: relative; height: 280px; margin-top: 14px; }
+.h2-dd-kop { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 8px; }
+.h2-dd { position: relative; height: 70px; }
+
+/* nog te loggen */
+.h2-teller { background: var(--c-red); color: #fff; border-radius: 999px; font-size: 12px; padding: 1px 8px; margin-left: 6px; vertical-align: middle; }
+.h2-uitleg { margin: -4px 0 12px; }
+.h2-alles-gelogd { margin: 4px 0 8px; padding: 10px 14px; border: 1px dashed var(--border); border-radius: 8px; color: var(--green); background: rgba(8,153,129,.05); }
+.h2-logs { display: grid; gap: 14px; margin-bottom: 18px; }
+.h2-log { margin: 0; border-left: 4px solid var(--c-gold); transition: opacity .25s, transform .25s; }
+.h2-log.klaar { border-left-color: var(--c-green); }
+.h2-log.weg { opacity: 0; transform: translateY(-6px); }
+.h2-log-kop { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.h2-log-titel { font-weight: 700; font-size: 15px; }
+.h2-log-nr { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: 4px; }
+.h2-log-feiten { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px; color: var(--text-dim); font-size: 12.5px; }
+.h2-sig { color: var(--plum); font-weight: 600; }
+.h2-log-grade { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.h2-log-grade .grade-mini { min-width: 32px; height: 32px; font-size: 16px; }
+.h2-score { font-size: 11px; color: var(--muted); }
+.h2-log-body { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 16px; margin-top: 12px; }
+.h2-log-chart img { width: 100%; border: 1px solid var(--border); border-radius: 6px; background: #fff; display: block; }
+.h2-log-velden { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.h2-blok-titel { font-size: 11px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+.h2-blok-titel .hint { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.h2-rij { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border-soft); font-size: 12.5px; }
+.h2-seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; flex: none; }
+.h2-seg button { border: 0; background: var(--panel); padding: 4px 11px; font: inherit; font-size: 12px; cursor: pointer; color: var(--text-dim); min-height: 28px; }
+.h2-seg button + button { border-left: 1px solid var(--border); }
+.h2-seg button.ja { background: var(--c-green); color: #fff; }
+.h2-seg button.nee { background: var(--c-red); color: #fff; }
+.h2-auto { font-size: 12px; padding: 2px 9px; border-radius: 5px; background: var(--panel-2); color: var(--text-dim); }
+.h2-auto.ja { color: var(--green); } .h2-auto.nee { color: var(--red); }
+.h2-lbl { font-size: 12px; color: var(--text-dim); margin: 10px 0 5px; font-weight: 600; }
+.h2-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.h2-chip { border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 4px 11px; font: inherit; font-size: 12px; cursor: pointer; color: var(--text-dim); min-height: 28px; }
+.h2-chip:hover { border-color: var(--blue); }
+.h2-chip.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+.h2-chip.goed.on { background: var(--c-green); border-color: var(--c-green); }
+.h2-chip.let-op.on { background: var(--c-gold); border-color: var(--c-gold); }
+.h2-chip.slecht.on { background: var(--c-red); border-color: var(--c-red); }
+.h2-les { width: 100%; margin-top: 10px; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; font: inherit; background: var(--panel); resize: vertical; }
+.h2-log-voet { display: flex; gap: 14px; align-items: center; justify-content: space-between; margin-top: 10px; flex-wrap: wrap; font-size: 12.5px; }
+
+/* sessie / heatmap */
+.h2-mini { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; margin-top: 8px; color: var(--text-dim); }
+.h2-heat { display: grid; gap: 3px; font-size: 11px; overflow-x: auto; }
+.h2-heat .hh { text-align: center; color: var(--muted); }
+.h2-heat .hw { color: var(--muted); display: flex; align-items: center; }
+.h2-heat .hc { height: 34px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 600; color: #fff; border: 1px solid var(--border-soft); min-width: 22px; }
+.h2-heat .hc.leeg { background: var(--bg-alt) !important; }
+.h2-heat-leg { display: flex; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); margin-top: 8px; }
+.h2-heat-leg span { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+
+/* proces */
+.h2-verg h3 { margin: 0 0 2px; font-size: 14px; }
+.h2-vrij { display: grid; grid-template-columns: 130px 1fr 60px; gap: 8px; align-items: center; padding: 5px 0; font-size: 12.5px; }
+.h2-vbar { position: relative; height: 12px; background: var(--bg-alt); border-radius: 3px; }
+.h2-vbar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--muted); }
+.h2-vbar > div { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+.h2-vbar > .pos { background: var(--c-green); } .h2-vbar > .neg { background: var(--c-red); }
+.h2-vwaarde { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* fouten */
+.h2-fouten { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin: 10px 0; }
+.h2-fout { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; }
+.h2-fout-kop { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+
+/* kalender */
+.h2-kal-kop { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.h2-kal-kop b { text-transform: capitalize; flex: 1; }
+.h2-kal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.h2-kal .kh { text-align: center; font-size: 11px; color: var(--muted); }
+.h2-kal .kc { aspect-ratio: 1.25; border-radius: 5px; border: 1px solid var(--border-soft); padding: 4px 5px; display: flex; flex-direction: column; justify-content: space-between; color: var(--text-dim); text-decoration: none; font-size: 11px; }
+.h2-kal .kc.leeg { border: 0; }
+.h2-kal .kc.w { background: rgba(8,153,129,.14); border-color: rgba(8,153,129,.35); color: var(--green); }
+.h2-kal .kc.v { background: rgba(242,54,69,.12); border-color: rgba(242,54,69,.32); color: var(--red); }
+.h2-kal .kc.nu { outline: 2px solid var(--blue); }
+.h2-kal .kb { font-weight: 700; text-align: right; font-size: 11px; }
+.h2-feiten { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+.h2-feiten > div { display: flex; flex-direction: column; font-size: 13px; }
+.h2-open { font-size: 11px; background: rgba(242,144,13,.15); color: var(--amber); padding: 2px 7px; border-radius: 999px; }
+
+/* saldo-venster */
+.h2-modal { position: fixed; inset: 0; background: rgba(24,28,37,.45); z-index: 100; display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto; }
+.h2-modal[hidden] { display: none; }
+.h2-modal-doos { width: 100%; max-width: 720px; margin: 0; }
+.h2-modal-kop { display: flex; justify-content: space-between; align-items: center; }
+.h2-modal-kop h3 { margin: 0; }
+.h2-saldo-opbouw { display: grid; gap: 4px; margin: 12px 0; }
+.h2-saldo-opbouw > div { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--border-soft); }
+.h2-saldo-opbouw .tot { font-size: 16px; border-bottom: 0; border-top: 2px solid var(--text); padding-top: 8px; }
+.h2-mt5-box { background: var(--bg-alt); border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; }
+.h2-schakel { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0; cursor: pointer; }
+.h2-schakel input { margin-top: 3px; }
+.h2-formrij { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin: 10px 0; }
+.h2-formrij label { display: flex; flex-direction: column; font-size: 12px; color: var(--text-dim); gap: 3px; }
+.h2-formrij input, .h2-formrij select { border: 1px solid var(--border); border-radius: 5px; padding: 7px 9px; font: inherit; background: var(--panel); min-width: 0; }
+.h2-formrij input[type=number] { width: 120px; }
+
+@media (max-width: 980px) {
+  .h2-grid3 { grid-template-columns: 1fr; }
+  .h2-log-body { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .h2-grid2, .h2-log-velden { grid-template-columns: 1fr; }
+  .h2-saldo { font-size: 30px; }
+  .h2-curve { height: 220px; }
+  .h2-vrij { grid-template-columns: 100px 1fr 54px; }
+  .h2-feiten { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* fixes na eerste render */
+.home2 [hidden], .h2-modal [hidden] { display: none !important; }
+.home2 #kpiBar .mt-bar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.h2-modal { z-index: 1000; padding-top: 70px; }
+.h2-modal table.mt td:nth-child(3) { text-align: left; }
+.home2 .period-panel .wk-bars { height: 80px; align-items: stretch; }
+.h2-heat .hc.licht { color: var(--text); }
+@media (max-width: 760px) { .home2 #kpiBar .mt-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.h2-kal { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.h2-kal .kc { min-width: 0; overflow: hidden; }
+@media (max-width: 760px) { .h2-kal .kb { font-size: 9px; } .h2-kal .kc { padding: 2px 3px; } }
+
+/* weekrapport v2.1 */
+.wk2-kop { display: flex; align-items: center; gap: 12px; margin: 8px 0 16px; flex-wrap: wrap; }
+.wk2-kop h1 { margin: 2px 0; font-size: 26px; }
+.wk2 #kpi .mt-bar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 16px; }
+.wk2 .mt-sub.pos { color: var(--green); } .wk2 .mt-sub.neg { color: var(--red); }
+.wk2-focus { border-left: 4px solid var(--plum); }
+.wk2-sterk { border-left: 4px solid var(--c-green); }
+.wk2-lijst { margin: 4px 0; padding-left: 18px; } .wk2-lijst li { margin: 3px 0; }
+.wk2-prog { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.wk2-prog .panel { margin: 0; } .wk2-prog h3 { font-size: 13px; }
+.wk2-mini { position: relative; height: 130px; }
+.wk2-dagen { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.wk2-dag { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; border-top: 3px solid var(--c-green); }
+.wk2-dag.v { border-top-color: var(--c-red); }
+.wk2-trades { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; margin-bottom: 16px; }
+.wk2-trade { margin: 0; display: block; color: var(--text); text-decoration: none !important; transition: border-color .15s; }
+.wk2-trade:hover { border-color: var(--blue); }
+.wk2-trade.open { border-left: 4px solid var(--c-gold); }
+.wk2-trade img { width: 100%; border-radius: 4px; border: 1px solid var(--border-soft); display: block; margin-bottom: 8px; }
+.wk2-geen { height: 60px; display: flex; align-items: center; justify-content: center; background: var(--bg-alt); border-radius: 4px; color: var(--muted); margin-bottom: 8px; }
+.wk2-trade-kop { display: flex; justify-content: space-between; align-items: center; }
+.wk2-trade-feit { display: flex; gap: 10px; align-items: baseline; margin: 3px 0; }
+.wk2-les { margin-top: 6px; font-style: italic; color: var(--plum); font-size: 12.5px; }
+@media (max-width: 760px) { .wk2-prog { grid-template-columns: repeat(2, minmax(0, 1fr)); } .wk2 #kpi .mt-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* homepage: progressie + SL/TP invullen */
+.h2-prog4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.h2-prog4 .panel { margin: 0; } .h2-prog4 h3 { font-size: 13px; margin: 0 0 4px; }
+@media (max-width: 980px) { .h2-prog4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.h2-niveaus { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; padding: 8px 10px; background: rgba(242,54,69,.06); border: 1px dashed rgba(242,54,69,.4); border-radius: 6px; font-size: 12.5px; }
+.h2-niveaus input { width: 100px; border: 1px solid var(--border); border-radius: 5px; padding: 5px 7px; font: inherit; }

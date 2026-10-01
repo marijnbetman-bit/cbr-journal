@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prullenbak — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="topbar">
+    <span class="mono" style="color:var(--muted);font-size:13px;">
+      <span class="blink-dot">●</span> prullenbak
+    </span>
+    <div class="spacer"></div>
+    <button class="btn btn-danger" id="leegKnop">Prullenbak legen</button>
+  </div>
+
+  <div class="container">
+    <p class="sub" style="max-width:70ch">
+      Verwijderde trades en no-trades blijven hier <b id="dagenTekst">30</b> dagen staan en tellen
+      nergens meer in mee. Daarna gaan ze vanzelf definitief weg.
+    </p>
+    <div id="pbLijst"></div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/prullenbak.js"></script>
+</body>
+</html>

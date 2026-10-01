@@ -1,0 +1,54 @@
+/* Signalen-pagina (1 okt 2026) -- bouwt op style.css, alleen wat daar niet in zit. */
+.sg-intro { max-width: 78ch; }
+
+.sg-stat { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.sg-stat th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .8px;
+  color: var(--muted); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.sg-stat td { padding: 8px 10px; border-bottom: 1px solid var(--border-soft); font-variant-numeric: tabular-nums; }
+.sg-stat tr:last-child td { border-bottom: 0; }
+.sg-stat td.num, .sg-stat th.num { text-align: right; }
+.sg-wrap { overflow-x: auto; }
+.sg-uitleg { font-size: 12.5px; color: var(--muted); margin: 10px 2px 0; max-width: 80ch; }
+
+.sg-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 14px; align-items: center; }
+.sg-filter .chip { cursor: pointer; user-select: none; }
+.sg-filter .chip.on { background: color-mix(in srgb, var(--blue) 14%, transparent); border-color: var(--blue); color: var(--blue); }
+.sg-filter .sg-n { opacity: .6; margin-left: 4px; font-variant-numeric: tabular-nums; }
+
+.sg-kaart { background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  margin-bottom: 18px; overflow: hidden; box-shadow: var(--shadow); }
+.sg-kaart-kop { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: baseline; padding: 12px 16px 10px; }
+.sg-kaart-kop .sg-titel { font-weight: 700; font-size: 15px; }
+.sg-kaart-kop .sg-sub { color: var(--muted); font-size: 12.5px; }
+.sg-kaart-kop .spacer { flex: 1; }
+
+.sg-uitkomst { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 6px; padding: 2px 8px;
+  border: 1px solid var(--border); background: var(--bg-alt); color: var(--text-dim); }
+.sg-uitkomst.tp { background: color-mix(in srgb, var(--green) 16%, transparent); border-color: var(--green); color: var(--green); }
+.sg-uitkomst.sl { background: color-mix(in srgb, var(--red) 14%, transparent); border-color: var(--red); color: var(--red); }
+.sg-uitkomst.onbeslist, .sg-uitkomst.bezig, .sg-uitkomst.wacht { border-color: var(--amber); color: var(--amber); }
+
+.sg-chart { background: #fff; border-top: 1px solid var(--border-soft); border-bottom: 1px solid var(--border-soft); min-height: 80px; }
+.sg-chart img { display: block; width: 100%; height: auto; }
+.sg-chart .sg-geen { padding: 26px 16px; color: var(--muted); font-size: 13px; text-align: center; }
+
+.sg-onder { padding: 12px 16px 14px; display: grid; gap: 12px; }
+.sg-oordeel { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sg-oordeel .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-right: 4px; }
+.sg-knop { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg-alt); color: var(--text); }
+.sg-knop:hover { border-color: var(--blue); }
+.sg-knop.on { background: color-mix(in srgb, var(--blue) 16%, transparent); border-color: var(--blue); color: var(--blue); font-weight: 700; }
+
+.sg-opm { display: grid; gap: 6px; }
+.sg-opm-regel { font-size: 13.5px; background: var(--bg-alt); border-radius: 8px; padding: 7px 10px; }
+.sg-opm-regel .ts { color: var(--muted); font-size: 11.5px; margin-right: 6px; font-variant-numeric: tabular-nums; }
+.sg-opm form { display: flex; gap: 6px; }
+.sg-opm input[type=text] { flex: 1; min-width: 0; font: inherit; font-size: 13.5px; padding: 7px 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+.sg-opm input[type=text]:focus { outline: 2px solid color-mix(in srgb, var(--blue) 45%, transparent); border-color: var(--blue); }
+
+@media (max-width: 600px) {
+  .sg-kaart-kop { padding: 10px 12px 8px; }
+  .sg-onder { padding: 10px 12px 12px; }
+}

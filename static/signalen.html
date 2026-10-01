@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Signalen — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/signalen.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="topbar">
+    <span class="mono" style="color:var(--muted);font-size:13px;">
+      <span class="blink-dot">●</span> signalen &amp; jouw oordeel
+    </span>
+    <div class="period-tabs" id="periodeTabs">
+      <button data-p="30" class="on">30 dagen</button>
+      <button data-p="90">90 dagen</button>
+      <button data-p="0">Alles</button>
+    </div>
+    <div class="spacer"></div>
+    <a class="btn btn-ghost" id="csvLink" href="/export/signalen.csv">⇩ Dataset (CSV)</a>
+  </div>
+
+  <div class="container">
+    <p class="sub sg-intro">
+      Elk signaal waarvan de setup <b>klaar</b> stond (entry, SL en TP vast) komt hier terecht, ook als je het niet
+      zag. Geef je oordeel in Telegram of hier, en zet er een opmerking bij. De journal rekent zelf uit wat het signaal
+      zou zijn geworden. Samen is dat de dataset voor betere signalen.
+    </p>
+
+    <div id="sgKop"></div>
+    <div id="sgStat"></div>
+
+    <div class="sg-filter" id="sgFilter"></div>
+    <div id="sgLijst"></div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/signalen.js"></script>
+</body>
+</html>

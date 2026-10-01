@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wat als… — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+
+  <div class="topbar">
+    <div class="period-tabs" id="periodTabs">
+      <button data-p="alles" class="on">Alles</button>
+      <button data-p="maand">Deze maand</button>
+      <button data-p="week">Deze week</button>
+      <button data-p="regel">Sinds regelwijziging</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="period-tabs" id="bronTabs">
+      <button data-b="live" class="on">Live</button>
+      <button data-b="backtest">Backtest</button>
+      <button data-b="alles">Alles</button>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- De rem: hoeveel is dit waard -->
+    <div id="betrouwbaarheid"></div>
+
+    <!-- Legenda van de drie soorten zekerheid -->
+    <div class="wa-legenda" id="legenda"></div>
+
+    <!-- 1. Herrekening -->
+    <div class="section-title">Als je strenger had gefilterd</div>
+    <p class="hint">Dit zijn je échte trades, opnieuw opgeteld. Er wordt niets aangenomen:
+      elke trade hieronder is gebeurd en de uitkomst is bekend. De vraag is alleen
+      welke je had moeten overslaan.</p>
+    <div id="filterTabel"></div>
+    <div class="chart-panel">
+      <h3>Saldoverloop per filter</h3>
+      <p class="hint">Klik een rij hierboven aan om die lijn te tonen of te verbergen.</p>
+      <div class="chart-wrap chart-hoog"><canvas id="cFilters"></canvas></div>
+    </div>
+
+    <!-- 2. SL verschuiven -->
+    <div class="section-title">Als je stop ergens anders had gestaan</div>
+    <div id="slKader"></div>
+    <div class="chart-grid">
+      <div class="chart-panel">
+        <h3>Stop-afstand</h3>
+        <div class="wa-schuif">
+          <input type="range" id="slSchuif" min="0" max="11" step="1" value="4" />
+          <div class="wa-schuif-waarde"><span id="slWaarde">3</span> points</div>
+        </div>
+        <div class="wa-knoppen" id="slKnoppen"></div>
+        <div id="slCijfers"></div>
+      </div>
+      <div class="chart-panel">
+        <h3>Netto per stop-afstand</h3>
+        <p class="hint">Vast risico in euro's: ruimer betekent een kleinere positie,
+          dus een lagere RR. Ruimer is niet gratis.</p>
+        <div class="chart-wrap"><canvas id="cSlReeks"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <h3>Saldoverloop bij deze stop</h3>
+      <div class="chart-wrap"><canvas id="cSlCurve"></canvas></div>
+    </div>
+
+    <!-- 3. TP dichterbij -->
+    <div class="section-title">Als je doel dichterbij had gelegen</div>
+    <div id="tpKader"></div>
+    <div class="chart-grid">
+      <div class="chart-panel">
+        <h3>TP-afstand</h3>
+        <div class="wa-schuif">
+          <input type="range" id="tpSchuif" min="0" max="6" step="1" value="6" />
+          <div class="wa-schuif-waarde"><span id="tpWaarde">100</span>% van je huidige TP</div>
+        </div>
+        <div id="tpCijfers"></div>
+      </div>
+      <div class="chart-panel">
+        <h3>Netto per TP-afstand</h3>
+        <div class="chart-wrap"><canvas id="cTpReeks"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <h3>Saldoverloop bij dit doel</h3>
+      <div class="chart-wrap"><canvas id="cTpCurve"></canvas></div>
+    </div>
+
+    <!-- 4. Gemiste setups -->
+    <div class="section-title">Als je had genomen wat je liet lopen</div>
+    <div id="gemistKader"></div>
+    <div class="wa-aanname" id="aannameKiezer"></div>
+    <div id="gemistCijfers"></div>
+    <div class="chart-panel">
+      <h3>Saldoverloop met de gemiste setups erbij</h3>
+      <p class="hint">De gearceerde band loopt van "ze winnen allemaal" tot "ze verliezen
+        allemaal". De werkelijke uitkomst ligt daar ergens tussenin — en die band is
+        breed, want deze trades zijn niet gebeurd.</p>
+      <div class="chart-wrap chart-hoog"><canvas id="cGemist"></canvas></div>
+    </div>
+    <div id="gemistDetail"></div>
+
+    <!-- Datakwaliteit -->
+    <div class="section-title">Waar dit op rust</div>
+    <div id="datakwaliteit"></div>
+
+  </div>
+
+  <script src="/static/vendor/chart.umd.min.js"></script>
+  <script src="/static/common.js"></script>
+  <script src="/static/watals.js"></script>
+</body>
+</html>

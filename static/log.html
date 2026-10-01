@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trading log — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="topbar">
+    <span class="mono" style="color:var(--muted);font-size:13px;">
+      <span class="blink-dot">●</span> trading log
+    </span>
+    <div class="spacer"></div>
+    <a class="btn btn-primary" id="nieuwKnop" href="/nieuw">+ Trade</a>
+  </div>
+
+  <div class="container">
+    <div class="mt-bar" id="logBar"></div>
+    <div id="logInhoud"></div>
+  </div>
+
+  <div class="lightbox" id="lightbox" hidden>
+    <button class="lb-sluit" id="lbSluit" aria-label="Sluiten">✕</button>
+    <img id="lbImg" alt="" />
+    <div class="lb-bij" id="lbBij"></div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/log.js"></script>
+</body>
+</html>

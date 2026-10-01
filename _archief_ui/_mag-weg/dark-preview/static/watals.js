@@ -1,0 +1,611 @@
+/* =====================================================================
+   Wat als… — scenario's op je eigen trades.
+
+   De hele UI draait om één onderscheid dat nergens mag vervagen:
+
+     herrekend     doorgetrokken lijn   je echte trades, opnieuw opgeteld
+     gemeten       doorgetrokken lijn   afgeleid uit wat je zelf gemeten hebt
+     geprojecteerd STIPPELLIJN + band   de uitkomst is aangenomen, niet bekend
+
+   Een projectie krijgt daarom nooit een gewone lijn en nooit een kaal getal.
+   Dat is geen decoratie: een stippellijn naast een volle lijn is het verschil
+   tussen "dit is gebeurd" en "dit had gekund".
+   ===================================================================== */
+
+let VALUTA = "€";
+let period = "alles";
+let bron = "live";
+let data = null;
+let slIndex = 4;
+let tpIndex = 6;
+let aannameModus = "grade";
+let eigenWinrate = 50;
+let verborgen = new Set();          // filters die de gebruiker uitzette
+const charts = {};
+
+const SL_STANDEN = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 15, 20];
+const TP_FACTOREN = [0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0];
+
+const KLEUR = {
+  groen: "#089981", rood: "#f23645", blauw: "#2962ff",
+  goud: "#f2900d", grijs: "#98a2b3", paars: "#7e57c2",
+  cyaan: "#00acc1", roze: "#d81b60", olijf: "#8d9440",
+};
+const LIJNKLEUREN = [
+  KLEUR.blauw, KLEUR.groen, KLEUR.goud, KLEUR.paars, KLEUR.cyaan,
+  KLEUR.roze, KLEUR.olijf, "#5c6bc0", "#26a69a", "#ab47bc", "#ef6c00", "#546e7a",
+];
+
+function eur(n) {
+  if (n === null || n === undefined) return "–";
+  return VALUTA + " " + (n >= 0 ? "+" : "") + Number(n).toFixed(2).replace(".", ",");
+}
+function pct(n) {
+  if (n === null || n === undefined) return "–";
+  return (n >= 0 ? "+" : "") + Number(n).toFixed(2).replace(".", ",") + "%";
+}
+function cls(n) { return n > 0 ? "pos" : (n < 0 ? "neg" : ""); }
+function mkChart(id, cfg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(el, cfg);
+}
+function leeg(wat) {
+  return `<div class="empty wachtend"><b>Nog niets te zeggen.</b><span>${wat}</span></div>`;
+}
+const td = (v, k = "") => `<td${k ? ` class="${k}"` : ""}>${v}</td>`;
+const tdn = (v, k = "") => `<td class="num ${k}">${v}</td>`;
+
+const basisAs = {
+  responsive: true, maintainAspectRatio: false,
+  interaction: { mode: "index", intersect: false },
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { grid: { display: false }, ticks: { color: "#787b86", font: { size: 11 } } },
+    y: { grid: { color: "rgba(120,123,134,.15)" }, ticks: { color: "#787b86", font: { size: 11 } } },
+  },
+};
+
+/* Eén badge die overal hetzelfde betekent. */
+function badge(herkomst) {
+  const t = {
+    herrekend: ["gemeten", "wa-b-hard", "Je echte trades, opnieuw opgeteld."],
+    gemeten: ["afgeleid", "wa-b-mid", "Afgeleid uit metingen die jij gelogd hebt."],
+    geprojecteerd: ["aangenomen", "wa-b-zacht", "De uitkomst is onbekend en aangenomen."],
+  }[herkomst] || ["?", "wa-b-zacht", ""];
+  return `<span class="wa-badge ${t[1]}" title="${t[2]}">${t[0]}</span>`;
+}
+
+/* ---------- de rem bovenaan ---------- */
+function renderBetrouwbaarheid(d) {
+  const b = d.betrouwbaarheid;
+  const kleur = { ruis: "slecht", indicatie: "twijfel", bruikbaar: "goed" }[b.niveau] || "twijfel";
+  document.getElementById("betrouwbaarheid").innerHTML = `
+    <div class="wa-rem ${kleur}">
+      <div class="wa-rem-kop">
+        <span class="wa-rem-n">${b.n}</span>
+        <span class="wa-rem-label">trades</span>
+        <span class="wa-rem-niveau">${b.niveau}</span>
+      </div>
+      <p>${b.tekst}</p>
+    </div>`;
+}
+
+function renderLegenda(d) {
+  const u = d.herkomst_uitleg;
+  document.getElementById("legenda").innerHTML = `
+    <div class="wa-leg-rij">${badge("herrekend")}<span>${u.herrekend}</span></div>
+    <div class="wa-leg-rij">${badge("gemeten")}<span>${u.gemeten}</span></div>
+    <div class="wa-leg-rij">${badge("geprojecteerd")}<span>${u.geprojecteerd}</span></div>`;
+}
+
+/* ---------- 1. herrekening ---------- */
+function renderFilters(d) {
+  const rijen = d.herrekening;
+  if (!rijen.length) {
+    document.getElementById("filterTabel").innerHTML = leeg("Log eerst wat trades.");
+    return;
+  }
+  const basis = rijen.find((r) => r.basis) || rijen[0];
+
+  const tr = rijen.map((r, i) => {
+    const uit = verborgen.has(r.key) ? " wa-uit" : "";
+    const kleur = LIJNKLEUREN[i % LIJNKLEUREN.length];
+    const dun = r.n < d.betrouwbaarheid.min_n;
+    return `<tr class="wa-rij${uit}" data-key="${r.key}">
+      <td><span class="wa-stip" style="background:${kleur}"></span>
+        <b>${r.label}</b>${r.basis ? ' <span class="wa-basis">werkelijk</span>' : ""}
+        <div class="wa-vraag">${r.vraag}</div></td>
+      ${tdn(r.n + (dun ? ' <span class="wa-dun" title="te weinig om iets te zeggen">⚠</span>' : ""))}
+      ${tdn(r.winrate + "%")}
+      ${tdn(eur(r.netto_eur), cls(r.netto_eur))}
+      ${tdn(r.basis ? "–" : eur(r.delta_eur), r.basis ? "" : cls(r.delta_eur))}
+      ${tdn(pct(r.groei_pct), cls(r.groei_pct))}
+    </tr>`;
+  }).join("");
+
+  document.getElementById("filterTabel").innerHTML = `
+    <div class="mt-table-wrap"><table class="mt wa-tabel">
+      <thead><tr>
+        <th>Scenario</th><th class="num">Trades</th><th class="num">Winrate</th>
+        <th class="num">Netto</th><th class="num">t.o.v. echt</th><th class="num">Rendement</th>
+      </tr></thead><tbody>${tr}</tbody>
+    </table></div>`;
+
+  document.querySelectorAll("#filterTabel .wa-rij").forEach((rij) => {
+    rij.addEventListener("click", () => {
+      const k = rij.dataset.key;
+      if (verborgen.has(k)) verborgen.delete(k); else verborgen.add(k);
+      renderFilters(data);
+      tekenFilterGrafiek(data);
+    });
+  });
+}
+
+function tekenFilterGrafiek(d) {
+  const rijen = d.herrekening.filter((r) => !verborgen.has(r.key) && r.n > 0);
+  const maxLen = Math.max(1, ...rijen.map((r) => r.curve.length));
+  const labels = Array.from({ length: maxLen }, (_, i) => (i === 0 ? "start" : "#" + i));
+
+  mkChart("cFilters", {
+    type: "line",
+    data: {
+      labels,
+      datasets: rijen.map((r) => {
+        const i = d.herrekening.findIndex((x) => x.key === r.key);
+        const kleur = LIJNKLEUREN[i % LIJNKLEUREN.length];
+        return {
+          label: r.label,
+          data: r.curve.map((p) => p.saldo),
+          borderColor: kleur,
+          backgroundColor: kleur,
+          borderWidth: r.basis ? 3 : 2,
+          pointRadius: 0, pointHoverRadius: 4, tension: 0.15,
+          spanGaps: true,
+        };
+      }),
+    },
+    options: {
+      ...basisAs,
+      plugins: {
+        legend: { display: true, position: "bottom",
+          labels: { boxWidth: 10, font: { size: 11 }, color: "#787b86" } },
+        tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${eur(c.parsed.y)}` } },
+      },
+    },
+  });
+}
+
+/* ---------- 2. SL ---------- */
+function renderSl(d) {
+  const s = d.sl;
+  document.getElementById("slKader").innerHTML = `
+    <div class="wa-kader">${badge("gemeten")}<p>${s.kader}</p>
+      <p class="wa-dekking">Gemeten bij <b>${s.meetbaar}</b> van je ${s.totaal} trades
+        (${s.dekking_pct}%).${s.huidige_sl ? ` Je gebruikt nu mediaan <b>${s.huidige_sl} points</b>.` : ""}</p>
+      ${s.waarschuwing ? `<p class="wa-let-op">${s.waarschuwing}</p>` : ""}
+    </div>`;
+
+  document.getElementById("slKnoppen").innerHTML = s.snelknoppen.map((p) => {
+    const idx = SL_STANDEN.indexOf(p);
+    return idx >= 0 ? `<button class="wa-knop" data-i="${idx}">${p} pt</button>` : "";
+  }).join("");
+  document.querySelectorAll("#slKnoppen .wa-knop").forEach((b) => {
+    b.addEventListener("click", () => {
+      slIndex = +b.dataset.i;
+      document.getElementById("slSchuif").value = slIndex;
+      herlaadSl();
+    });
+  });
+
+  if (!s.meetbaar) {
+    document.getElementById("slCijfers").innerHTML =
+      leeg("Vul sweep-overshoot en SL-afstand in bij je trades, dan werkt deze schuif.");
+    return;
+  }
+  tekenSlReeks(d);
+  herlaadSl();
+}
+
+function herlaadSl() {
+  const stand = SL_STANDEN[slIndex];
+  document.getElementById("slWaarde").textContent = String(stand);
+  const scen = (data.sl.reeks || []).find((r) => r.sl_points === stand);
+  if (!scen) return;
+
+  const dun = !scen.genoeg
+    ? `<p class="wa-let-op">Slechts ${scen.n} trades met een meting. Dit is een anekdote, geen cijfer.</p>` : "";
+  const rrLet = scen.rr_onder_1
+    ? `<p class="wa-let-op">Bij ${scen.rr_onder_1} trades zakt de RR onder je vloer van 1.</p>` : "";
+
+  document.getElementById("slCijfers").innerHTML = `
+    <div class="wa-cijfers">
+      <div><span>Winrate</span><b>${scen.winrate}%</b></div>
+      <div><span>Netto</span><b class="${cls(scen.netto_eur)}">${eur(scen.netto_eur)}</b></div>
+      <div><span>Rendement</span><b class="${cls(scen.groei_pct)}">${pct(scen.groei_pct)}</b></div>
+      <div><span>Gem. RR</span><b>${scen.rr_gemiddeld ?? "–"}</b></div>
+      <div><span>Verlies → winst</span><b class="pos">${scen.gered}</b></div>
+      <div><span>Winst → verlies</span><b class="neg">${scen.verspeeld}</b></div>
+      <div><span>Niet te bepalen</span><b>${scen.onbekend}</b></div>
+    </div>${dun}${rrLet}`;
+
+  mkChart("cSlCurve", {
+    type: "line",
+    data: {
+      labels: scen.curve.map((p) => (p.i === 0 ? "start" : "#" + p.i)),
+      datasets: [{
+        label: `SL ${stand} pt`,
+        data: scen.curve.map((p) => p.saldo),
+        borderColor: KLEUR.blauw, backgroundColor: "rgba(41,98,255,.10)",
+        borderWidth: 2, fill: true, pointRadius: 0, tension: 0.15,
+      }],
+    },
+    options: { ...basisAs, plugins: { ...basisAs.plugins,
+      tooltip: { callbacks: { label: (c) => eur(c.parsed.y) } } } },
+  });
+}
+
+function tekenSlReeks(d) {
+  const r = d.sl.reeks.filter((x) => x.n > 0);
+  mkChart("cSlReeks", {
+    type: "bar",
+    data: {
+      labels: r.map((x) => x.sl_points + " pt"),
+      datasets: [{
+        data: r.map((x) => x.netto_eur),
+        backgroundColor: r.map((x) =>
+          !x.genoeg ? "rgba(152,162,175,.45)" : (x.netto_eur >= 0 ? KLEUR.groen : KLEUR.rood)),
+      }],
+    },
+    options: { ...basisAs, plugins: { ...basisAs.plugins,
+      tooltip: { callbacks: {
+        label: (c) => {
+          const x = r[c.dataIndex];
+          return [`Netto ${eur(x.netto_eur)}`, `Winrate ${x.winrate}%`,
+                  `${x.n} metingen`, x.genoeg ? "" : "te weinig om op te bouwen"].filter(Boolean);
+        } } } } },
+  });
+}
+
+/* ---------- 3. TP ---------- */
+function renderTp(d) {
+  const t = d.tp;
+  document.getElementById("tpKader").innerHTML = `
+    <div class="wa-kader">${badge("gemeten")}<p>${t.kader}</p>
+      <p class="wa-dekking">${t.verder_weg}</p></div>`;
+  tekenTpReeks(d);
+  herlaadTp();
+}
+
+function herlaadTp() {
+  const f = TP_FACTOREN[tpIndex];
+  document.getElementById("tpWaarde").textContent = String(Math.round(f * 100));
+  const scen = (data.tp.reeks || []).find((r) => r.factor === f);
+  if (!scen) return;
+
+  const basis = data.tp.reeks.find((r) => r.factor === 1.0);
+  const delta = basis ? scen.netto_eur - basis.netto_eur : null;
+  const rrLet = scen.rr_onder_1
+    ? `<p class="wa-let-op">Bij ${scen.rr_onder_1} trades zakt de RR hiermee onder 1 — tegen je eigen vloer.</p>` : "";
+
+  document.getElementById("tpCijfers").innerHTML = `
+    <div class="wa-cijfers">
+      <div><span>Winrate</span><b>${scen.winrate}%</b></div>
+      <div><span>Netto</span><b class="${cls(scen.netto_eur)}">${eur(scen.netto_eur)}</b></div>
+      <div><span>t.o.v. echt</span><b class="${cls(delta)}">${delta === null ? "–" : eur(delta)}</b></div>
+      <div><span>Rendement</span><b class="${cls(scen.groei_pct)}">${pct(scen.groei_pct)}</b></div>
+    </div>
+    <p class="wa-ondergrens">Dit is een <b>ondergrens</b>: verliezers blijven hier verliezer,
+      omdat we niet gemeten hebben of een korter doel wél geraakt was vóór de stop.</p>${rrLet}`;
+
+  mkChart("cTpCurve", {
+    type: "line",
+    data: {
+      labels: scen.curve.map((p) => (p.i === 0 ? "start" : "#" + p.i)),
+      datasets: [{
+        label: `TP ${Math.round(f * 100)}%`,
+        data: scen.curve.map((p) => p.saldo),
+        borderColor: KLEUR.goud, backgroundColor: "rgba(242,144,13,.10)",
+        borderWidth: 2, fill: true, pointRadius: 0, tension: 0.15,
+      }],
+    },
+    options: { ...basisAs, plugins: { ...basisAs.plugins,
+      tooltip: { callbacks: { label: (c) => eur(c.parsed.y) } } } },
+  });
+}
+
+function tekenTpReeks(d) {
+  const r = d.tp.reeks;
+  mkChart("cTpReeks", {
+    type: "bar",
+    data: {
+      labels: r.map((x) => Math.round(x.factor * 100) + "%"),
+      datasets: [{
+        data: r.map((x) => x.netto_eur),
+        backgroundColor: r.map((x) => (x.factor === 1 ? KLEUR.blauw
+          : (x.netto_eur >= 0 ? KLEUR.groen : KLEUR.rood))),
+      }],
+    },
+    options: { ...basisAs, plugins: { ...basisAs.plugins,
+      tooltip: { callbacks: {
+        label: (c) => [`Netto ${eur(r[c.dataIndex].netto_eur)}`,
+                       `Winrate ${r[c.dataIndex].winrate}%`] } } } },
+  });
+}
+
+/* ---------- 4. gemiste setups (projectie) ---------- */
+function renderGemist(d) {
+  const g = d.gemist;
+  document.getElementById("gemistKader").innerHTML = `
+    <div class="wa-kader wa-kader-zacht">${badge("geprojecteerd")}<p>${g.kader}</p></div>`;
+
+  const opties = [
+    ["grade", "Zoals je eigen setups van die grade"],
+    ["conservatief", "Voorzichtig (ondergrens 95%-interval)"],
+    ["eigen", "Zelf instellen"],
+  ];
+  document.getElementById("aannameKiezer").innerHTML = `
+    <div class="wa-aanname-kop">Wat neem je aan over een trade die niet gebeurd is?</div>
+    <div class="wa-aanname-knoppen">
+      ${opties.map(([k, l]) => `<button class="wa-knop${aannameModus === k ? " aan" : ""}"
+        data-m="${k}">${l}</button>`).join("")}
+    </div>
+    <div class="wa-eigen${aannameModus === "eigen" ? "" : " verborgen"}">
+      <input type="range" id="eigenSchuif" min="0" max="100" step="5" value="${eigenWinrate}" />
+      <span><b id="eigenWaarde">${eigenWinrate}</b>% winrate aangenomen</span>
+    </div>`;
+
+  document.querySelectorAll("#aannameKiezer .wa-knop").forEach((b) => {
+    b.addEventListener("click", () => { aannameModus = b.dataset.m; load(); });
+  });
+  const es = document.getElementById("eigenSchuif");
+  if (es) {
+    es.addEventListener("input", () => {
+      document.getElementById("eigenWaarde").textContent = es.value;
+    });
+    es.addEventListener("change", () => { eigenWinrate = +es.value; load(); });
+  }
+
+  if (!g.n_overgeslagen) {
+    document.getElementById("gemistCijfers").innerHTML =
+      leeg("Je hebt nog geen overgeslagen setups gelogd. Log ze — juist die zeggen iets.");
+    document.getElementById("gemistDetail").innerHTML = "";
+    return;
+  }
+
+  // Kleur volgt de schuldvraag, niet de uitkomst: groen = je deed niets fout.
+  const SOORT_KLEUR = { false: "wa-soort-ok", true: "wa-soort-fout", null: "wa-soort-grijs" };
+
+  document.getElementById("gemistCijfers").innerHTML = `
+    ${g.oordeel ? `<div class="wa-oordeel">${g.oordeel}</div>` : ""}
+    <div class="chart-grid">
+      ${g.blokken.map((s) => `
+        <div class="chart-panel wa-projectie ${SOORT_KLEUR[String(s.fout)]}">
+          <h3>${s.titel} ${badge("geprojecteerd")}</h3>
+          <p class="hint">${s.uitleg}</p>
+          <div class="wa-cijfers">
+            <div><span>Setups</span><b>${s.n_kandidaten}${s.n_valide < s.n_kandidaten
+              ? ` <small class="wa-klein">(${s.n_valide} valide)</small>` : ""}</b></div>
+            <div><span>Verwachte bijdrage</span><b class="${cls(s.bijdrage_verwacht)}">${eur(s.bijdrage_verwacht)}</b></div>
+            <div><span>Als ze allemaal raak waren</span><b class="pos">${eur(s.bijdrage_best)}</b></div>
+            <div><span>Als ze allemaal mis waren</span><b class="neg">${eur(s.bijdrage_slecht)}</b></div>
+          </div>
+          <p class="wa-soort-uitleg">${s.soort_uitleg}</p>
+          <p class="wa-band-uitleg">Dit is wat déze ${s.n_kandidaten} setups zouden bijdragen —
+            niet je totaal. Je saldo zou uitkomen tussen ${eur(s.netto_slecht)} en ${eur(s.netto_best)}
+            in plaats van ${eur(s.basis_netto)}. Die band is wat we níet weten.</p>
+        </div>`).join("")}
+    </div>`;
+
+  tekenGemistGrafiek(d);
+  renderGemistDetail(d);
+}
+
+function tekenGemistGrafiek(d) {
+  const g = d.gemist;
+  const echt = d.herrekening.find((r) => r.basis);
+  const sets = [];
+
+  if (echt) {
+    sets.push({
+      label: "Werkelijk", data: echt.curve.map((p) => p.saldo),
+      borderColor: KLEUR.blauw, borderWidth: 3, pointRadius: 0, tension: 0.15, fill: false,
+    });
+  }
+  const BLOK_KLEUR = {
+    bewust: KLEUR.groen, aarzeling: KLEUR.rood,
+    uitvoering: KLEUR.goud, markt: KLEUR.cyaan, onbekend: KLEUR.grijs,
+  };
+  for (const s of g.blokken) {
+    const kleur = BLOK_KLEUR[s.key] || KLEUR.grijs;
+    const label = s.titel;
+    // De band eerst, zodat de stippellijn er bovenop komt te liggen.
+    sets.push({
+      label: label + " — alles raak", data: s.curve_best.map((p) => p.saldo),
+      borderColor: "transparent", backgroundColor: kleur + "18",
+      pointRadius: 0, fill: "+1", tension: 0.15,
+    });
+    sets.push({
+      label: label + " — alles mis", data: s.curve_slecht.map((p) => p.saldo),
+      borderColor: "transparent", backgroundColor: kleur + "18",
+      pointRadius: 0, fill: false, tension: 0.15,
+    });
+    sets.push({
+      label: label + " (verwacht)", data: s.curve.map((p) => p.saldo),
+      borderColor: kleur, borderWidth: 2, borderDash: [6, 4],
+      pointRadius: 0, tension: 0.15, fill: false,
+    });
+  }
+
+  const maxLen = Math.max(1, ...sets.map((s) => s.data.length));
+  mkChart("cGemist", {
+    type: "line",
+    data: {
+      labels: Array.from({ length: maxLen }, (_, i) => (i === 0 ? "start" : "#" + i)),
+      datasets: sets,
+    },
+    options: {
+      ...basisAs,
+      plugins: {
+        legend: { display: true, position: "bottom",
+          labels: { boxWidth: 10, font: { size: 11 }, color: "#787b86",
+            filter: (i) => !i.text.includes("alles ") },
+        },
+        tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${eur(c.parsed.y)}` } },
+      },
+    },
+  });
+}
+
+function renderGemistDetail(d) {
+  const g = d.gemist;
+  const alle = [];
+  for (const s of g.blokken) {
+    alle.push(...s.detail.map((x) => ({ ...x, soort: s.key, soortTitel: s.titel, fout: s.fout })));
+  }
+  if (!alle.length) { document.getElementById("gemistDetail").innerHTML = ""; return; }
+  alle.sort((a, b) => (b.datum || "").localeCompare(a.datum || ""));
+
+  const merk = (x) => {
+    if (x.fout === false && x.soort === "markt") return '<span class="wa-merk ok">geen fout</span>';
+    if (x.fout === false) return '<span class="wa-merk ok">discipline</span>';
+    if (x.fout === true) return '<span class="wa-merk fout">zelf laten liggen</span>';
+    return '<span class="wa-merk grijs">onbekend</span>';
+  };
+
+  const tr = alle.map((x) => `<tr>
+    ${td(x.datum || "–")}
+    ${td(`<span class="grade grade-${x.grade || "C"}">${x.grade || "?"}</span>`)}
+    ${td(x.reden_label + " " + merk(x))}
+    ${tdn(x.rr ? x.rr.toFixed(2) : "–")}
+    ${tdn(x.aanname_pct + "%", "")}
+    ${tdn(eur(x.verwacht_eur), cls(x.verwacht_eur))}
+    ${tdn(eur(x.winst_eur), "pos")}
+    ${tdn(eur(x.verlies_eur), "neg")}
+  </tr>`).join("");
+
+  document.getElementById("gemistDetail").innerHTML = `
+    <div class="chart-panel">
+      <h3>Per overgeslagen setup ${badge("geprojecteerd")}</h3>
+      <p class="hint">De aanname-kolom laat zien welke winrate voor die trade gebruikt is,
+        en waar die vandaan komt. Winst en verlies zijn de twee randen van de band.</p>
+      <div class="mt-table-wrap"><table class="mt">
+        <thead><tr>
+          <th>Datum</th><th>Grade</th><th>Reden</th><th class="num">RR</th>
+          <th class="num">Aanname</th><th class="num">Verwacht</th>
+          <th class="num">Als raak</th><th class="num">Als mis</th>
+        </tr></thead><tbody>${tr}</tbody>
+      </table></div>
+      <p class="hint">${alle[0] ? alle[0].aanname_uitleg : ""}</p>
+    </div>`;
+}
+
+/* ---------- datakwaliteit ---------- */
+function renderDatakwaliteit(d) {
+  const k = d.datakwaliteit;
+  const velden = [
+    ["Risico per trade ingevuld", k.risico_gemeten],
+    ["Sweep-overshoot gemeten", k.sweep_gemeten],
+    ["SL-afstand gemeten", k.sl_gemeten],
+    ["TP-afstand gemeten", k.tp_gemeten],
+    ["'Daarna alsnog TP' ingevuld", k.sl_dan_tp],
+    ["Minuut in de hourly", k.minuten_in_hourly],
+    ["Shift-kwaliteit", k.shift_kwaliteit],
+    ["TP-verloop", k.tp_verloop],
+  ];
+  const rijen = velden.map(([naam, n]) => {
+    const p = k.n ? Math.round(100 * n / k.n) : 0;
+    const kl = p === 100 ? "pos" : (p >= 50 ? "" : "neg");
+    return `<tr>${td(naam)}${tdn(`${n} / ${k.n}`)}
+      ${td(`<div class="wa-balk"><div style="width:${p}%"></div></div>`)}
+      ${tdn(p + "%", kl)}</tr>`;
+  }).join("");
+
+  document.getElementById("datakwaliteit").innerHTML = `
+    <div class="chart-panel">
+      <p class="hint">Elk scenario hierboven kan alleen rekenen met velden die je ingevuld hebt.
+        Een leeg veld betekent niet "geen effect" maar "niet te beoordelen".</p>
+      <div class="mt-table-wrap"><table class="mt">
+        <thead><tr><th>Veld</th><th class="num">Ingevuld</th><th></th><th class="num">%</th></tr></thead>
+        <tbody>${rijen}</tbody></table></div>
+      ${k.grootste_gat ? `<p class="wa-let-op">${k.grootste_gat}</p>` : ""}
+      ${k.risico_terugval ? `<p class="wa-let-op">Bij ${k.risico_terugval} trades is het risico
+        niet af te leiden; daar rekenen we met je mediane inzet. Vul risk_eur in om dat weg te nemen.</p>` : ""}
+    </div>`;
+}
+
+/* ---------- laden ---------- */
+function periodRange(p) {
+  const now = new Date();
+  const iso = (dt) => dt.toISOString().slice(0, 10);
+  if (p === "week") {
+    const day = (now.getDay() + 6) % 7;
+    const mon = new Date(now); mon.setDate(now.getDate() - day);
+    return { van: iso(mon), tot: iso(now) };
+  }
+  if (p === "maand") {
+    const first = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { van: iso(first), tot: iso(now) };
+  }
+  return { van: null, tot: null };
+}
+
+async function load() {
+  const { van, tot } = periodRange(period);
+  const qp = [];
+  if (van) qp.push("van=" + van);
+  if (tot) qp.push("tot=" + tot);
+  if (period === "regel") qp.push("sinds_regel=true");
+  qp.push("bron=" + encodeURIComponent(bron));
+  qp.push("sl_points=" + SL_STANDEN[slIndex]);
+  qp.push("tp_factor=" + TP_FACTOREN[tpIndex]);
+  qp.push("aanname=" + encodeURIComponent(aannameModus));
+  qp.push("eigen_winrate=" + eigenWinrate);
+
+  document.body.classList.add("laadt");
+  try { data = await api("/api/watals?" + qp.join("&")); }
+  finally { document.body.classList.remove("laadt"); }
+
+  renderBetrouwbaarheid(data);
+  renderLegenda(data);
+  renderFilters(data);
+  tekenFilterGrafiek(data);
+  renderTp(data);
+  renderDatakwaliteit(data);
+}
+
+async function boot() {
+  try {
+    const settings = await api("/api/settings");
+    VALUTA = settings.valuta || "€";
+  } catch (e) { /* valuta blijft € */ }
+
+  document.querySelectorAll("#periodTabs button").forEach((b) => {
+    b.addEventListener("click", () => {
+      period = b.dataset.p;
+      document.querySelectorAll("#periodTabs button").forEach((x) => x.classList.toggle("on", x === b));
+      load();
+    });
+  });
+  document.querySelectorAll("#bronTabs button").forEach((b) => {
+    b.addEventListener("click", () => {
+      bron = b.dataset.b;
+      document.querySelectorAll("#bronTabs button").forEach((x) => x.classList.toggle("on", x === b));
+      load();
+    });
+  });
+
+  // SL-verschuiven is eruit (geen data): slider bestaat niet meer.
+
+  const tp = document.getElementById("tpSchuif");
+  tp.addEventListener("input", () => {
+    tpIndex = +tp.value;
+    document.getElementById("tpWaarde").textContent = String(Math.round(TP_FACTOREN[tpIndex] * 100));
+  });
+  tp.addEventListener("change", () => herlaadTp());
+
+  await load();
+}
+
+boot();

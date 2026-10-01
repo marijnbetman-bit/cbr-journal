@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="nl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Exporteren</title>
+<style>
+:root{--bg:#f7f4ef;--panel:#fff;--rand:#ddd7cd;--tekst:#1c1c1c;--zacht:#6b6b6b;--accent:#6d4dea}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16151a;--panel:#1f1e25;
+  --rand:#34323b;--tekst:#ece9e4;--zacht:#a39e96;--accent:#9d86f5}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tekst);padding:12px 16px 48px;
+  font:15px/1.5 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:620px;margin:0 auto}
+a.terug{color:var(--accent);text-decoration:none;font-size:14px}
+h1{font-size:22px;margin:10px 0 16px}
+.optie{display:block;background:var(--panel);border:1px solid var(--rand);border-radius:12px;
+  padding:14px 16px;margin-bottom:10px;color:inherit;text-decoration:none}
+.optie:hover,.optie:focus-visible{border-color:var(--accent);outline:none}
+.optie b{display:block;font-size:16px;margin-bottom:2px}
+.optie span{color:var(--zacht);font-size:14px}
+.klein{font-size:13px;color:var(--zacht);margin-top:18px}
+</style></head><body><div class="wrap">
+<a class="terug" href="/">← Journal</a>
+<h1>Exporteren</h1>
+<a class="optie" href="/export/journal.html"><b>Journal als los bestand (HTML)</b>
+  <span>Alles erin: cijfers, equitylijn, elke trade met checks, criteria, notities en chart.
+  Opent op elk apparaat, ook zonder dat de journal draait. Zet 'm in OneDrive of mail 'm naar jezelf.</span></a>
+<a class="optie" href="/export/trades.csv"><b>Trades voor Excel (CSV)</b>
+  <span>Eén rij per trade, puntkomma-gescheiden met komma-decimalen: opent direct goed in Nederlandse Excel.</span></a>
+<a class="optie" href="/api/export"><b>Volledige back-up (zip)</b>
+  <span>Alle tabellen als CSV plus alle screenshots. Voor als je ooit wilt verhuizen.</span></a>
+<p class="klein">De eerste twee bevatten fase 2 (bias eerst). Het fase-1-archief krijg je met
+<a href="/export/journal.html?fase=1">deze link</a>.</p>
+</div></body></html>

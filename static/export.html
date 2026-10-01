@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="nl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PDF-rapport — CBR Journal</title>
+<link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="topbar"><span style="color:var(--muted);font-size:13px;">PDF-rapport</span><div class="spacer"></div></div>
+
+  <div class="container" style="max-width:640px">
+    <h2 style="margin-top:0;">Rapport downloaden</h2>
+    <p style="color:var(--muted);margin-top:-8px;">De kerncijfers van een gekozen periode op één
+      PDF-pagina — saldoverloop, winrate, expectancy, foutmarges en R laten liggen. Automatisch uit je MT5-data.</p>
+
+    <div class="panel">
+      <div class="period-tabs" id="perTabs" style="margin-bottom:16px;flex-wrap:wrap">
+        <button data-p="alles" class="on">Alles</button>
+        <button data-p="maand">Deze maand</button>
+        <button data-p="week">Deze week</button>
+        <button data-p="custom">Zelf kiezen</button>
+      </div>
+      <div id="customRij" style="display:none;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+        <label class="field" style="margin:0"><span class="lbl">Van</span><input type="date" id="van" /></label>
+        <label class="field" style="margin:0"><span class="lbl">Tot</span><input type="date" id="tot" /></label>
+      </div>
+      <div class="period-tabs" id="bronTabs" style="margin-bottom:18px">
+        <button data-b="live" class="on">Live</button>
+        <button data-b="backtest">Backtest</button>
+        <button data-b="alles">Alles</button>
+      </div>
+      <a class="btn btn-primary" id="download" href="#" style="font-size:16px;padding:12px 22px;">⬇ Download PDF</a>
+      <p class="hint" id="periodeLabel" style="margin-top:12px;"></p>
+    </div>
+
+    <h2 style="margin-top:28px;">Weekrapport</h2>
+    <div class="panel">
+      <p style="margin-top:0">Je week op papier: kerncijfers met het verschil t.o.v. vorige week, focus voor volgende week,
+        je progressie over 12 weken en elke trade met chart, grade, emotie en les.</p>
+      <a class="btn btn-primary" href="/api/weekrapport.pdf">⬇ PDF deze week</a>
+      <a class="btn" href="/week" style="margin-left:8px">Weekrapport bekijken</a>
+    </div>
+
+    <h2 style="margin-top:28px;">Data &amp; dataset</h2>
+    <div class="panel">
+      <p style="margin-top:0">Alle trades met MT5-feiten, marktcontext (sessie, ATR, spread, vorige 1H high/low),
+        signaalkenmerken en <b>jouw oordeel</b> (grade, checklist, emotie, uitvoering). Een gelabelde dataset
+        om later een model mee te trainen of je setup te backtesten.</p>
+      <a class="btn btn-primary" href="/export/dataset.csv">⬇ Dataset (CSV)</a>
+      <a class="btn" href="/export/trades.csv" style="margin-left:8px">⬇ Trades voor Excel</a>
+      <p class="hint" id="mdStatus" style="margin-top:12px;"></p>
+    </div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script>
+    let per = "alles", bron = "live";
+    function isoWeekMonday() { const d = new Date(); const dow = (d.getDay() + 6) % 7; d.setDate(d.getDate() - dow); return d.toISOString().slice(0, 10); }
+    function firstOfMonth() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`; }
+    function today() { return new Date().toISOString().slice(0, 10); }
+    function bereik() {
+      if (per === "maand") return { van: firstOfMonth(), tot: today(), label: "Deze maand" };
+      if (per === "week") return { van: isoWeekMonday(), tot: today(), label: "Deze week" };
+      if (per === "custom") return { van: document.getElementById("van").value, tot: document.getElementById("tot").value, label: "Gekozen periode" };
+      return { van: "", tot: "", label: "Alles" };
+    }
+    fetch("/api/marktdata/status").then(r => r.json()).then(m => {
+      document.getElementById("mdStatus").textContent = m.candles
+        ? `Marktdata: ${m.candles.toLocaleString("nl-NL")} minuutcandles (${m.van} t/m ${m.tot}, ${m.mb} MB) in marktdata.db`
+        : "Marktdata: nog leeg — vult zich vanzelf zodra MT5 verbonden is.";
+    }).catch(() => {});
+    function ververs() {
+      const b = bereik();
+      const qp = [];
+      if (b.van) qp.push("van=" + b.van);
+      if (b.tot) qp.push("tot=" + b.tot);
+      qp.push("bron=" + bron);
+      document.getElementById("download").href = "/api/rapport.pdf?" + qp.join("&");
+      document.getElementById("periodeLabel").textContent =
+        `${b.label}${b.van ? " · " + b.van + " t/m " + (b.tot || "nu") : ""} · bron: ${bron}`;
+    }
+    document.querySelectorAll("#perTabs button").forEach((btn) => btn.addEventListener("click", () => {
+      per = btn.dataset.p;
+      document.querySelectorAll("#perTabs button").forEach((x) => x.classList.toggle("on", x === btn));
+      document.getElementById("customRij").style.display = per === "custom" ? "flex" : "none";
+      ververs();
+    }));
+    document.querySelectorAll("#bronTabs button").forEach((btn) => btn.addEventListener("click", () => {
+      bron = btn.dataset.b;
+      document.querySelectorAll("#bronTabs button").forEach((x) => x.classList.toggle("on", x === btn));
+      ververs();
+    }));
+    ["van", "tot"].forEach((id) => document.getElementById(id).addEventListener("change", ververs));
+    ververs();
+  </script>
+</body>
+</html>

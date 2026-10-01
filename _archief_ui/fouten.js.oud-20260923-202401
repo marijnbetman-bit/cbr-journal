@@ -1,0 +1,166 @@
+// Foutenanalyse — patronen, trend en corrigerende regels.
+
+const FC = (() => {
+  const v = (naam, terugval) =>
+    getComputedStyle(document.documentElement).getPropertyValue(naam).trim() || terugval;
+  return {
+    green: v("--c-green", "#549a6b"), blue: v("--c-teal", "#519890"),
+    red: v("--c-red", "#ca6861"), amber: v("--c-gold", "#a98247"),
+    muted: v("--muted", "#a597ae"),
+    grid: "color-mix(in srgb, " + v("--border", "#35283f") + " 70%, transparent)",
+  };
+})();
+const fcharts = {};
+Chart.defaults.color = FC.muted;
+Chart.defaults.font.family = "'Segoe UI', system-ui, -apple-system, sans-serif";
+Chart.defaults.borderColor = FC.grid;
+
+const GROEP_NAAM = { E: "Entry/setup", R: "Risk", M: "Management", P: "Psychologie", D: "Discipline" };
+
+let fbron = (function () { try { return localStorage.getItem("cbr_bron") || "live"; } catch (e) { return "live"; } })();
+
+async function boot() {
+  document.querySelectorAll("#bronTabs button").forEach((b) => {
+    b.classList.toggle("on", b.dataset.b === fbron);
+    b.addEventListener("click", () => {
+      document.querySelectorAll("#bronTabs button").forEach((x) => x.classList.remove("on"));
+      b.classList.add("on");
+      fbron = b.dataset.b;
+      try { localStorage.setItem("cbr_bron", fbron); } catch (e) {}
+      load();
+    });
+  });
+  await load();
+}
+
+async function load() {
+  const d = await api("/api/fouten?bron=" + encodeURIComponent(fbron));
+  renderKpi(d);
+  renderTrend(d);
+  renderPatronen(d);
+  renderCharts(d);
+  renderTable(d);
+}
+
+function renderKpi(d) {
+  document.getElementById("kpi").innerHTML = `
+    <div class="stat"><div class="num">${d.totaal_fouten}</div><div class="cap">Fouten totaal</div></div>
+    <div class="stat"><div class="num">${d.fouten_per_trade}</div><div class="cap">Per trade</div></div>
+    <div class="stat"><div class="num ${d.schoon_pct >= 50 ? "pos" : ""}">${d.schoon_pct}%</div><div class="cap">Schone trades</div></div>
+    <div class="stat"><div class="num ${d.patronen.length ? "neg" : "pos"}">${d.patronen.length}</div><div class="cap">Patronen</div></div>
+    <div class="stat"><div class="num">${d.n_trades}</div><div class="cap">Trades bekeken</div></div>`;
+}
+
+function renderTrend(d) {
+  const t = d.trend, el = document.getElementById("trendBanner");
+  let cls = "info", ic = "📊", txt;
+  if (t.richting === "onbekend") {
+    ic = "⏳";
+    txt = `Nog te weinig trades om een trend te zien. Vanaf ~20 trades laat ik hier zien of je minder fouten gaat maken.`;
+  } else if (t.richting === "beter") {
+    cls = "goed"; ic = "📉";
+    txt = `Je maakt <b>minder fouten</b> dan hiervoor: ${t.recent} per trade in je laatste 10, tegen ${t.eerder} daarvoor. Zo hoort het.`;
+  } else if (t.richting === "slechter") {
+    cls = "slecht"; ic = "📈";
+    txt = `Je maakt <b>meer fouten</b> dan hiervoor: ${t.recent} per trade in je laatste 10, tegen ${t.eerder} daarvoor. Terug naar de checklist.`;
+  } else {
+    txt = `Je zit gelijk: ${t.recent} fouten per trade, net als daarvoor.`;
+  }
+  el.innerHTML = `<div class="trend-banner ${cls}"><span class="ic">${ic}</span><div>${txt}</div></div>`;
+}
+
+function renderPatronen(d) {
+  document.getElementById("patroonUitleg").textContent =
+    `Een foutcode die ${d.drempel}× binnen ${d.venster} opeenvolgende trades terugkomt, is een patroon — geen toeval.`;
+  const box = document.getElementById("patronen");
+  if (!d.patronen.length) {
+    box.innerHTML = `<div class="empty">✅ Geen patronen gevonden. Geen enkele foutcode kwam
+      ${d.drempel}× terug binnen ${d.venster} trades. Zo houden.</div>`;
+    return;
+  }
+  box.innerHTML = `<div class="cards">` + d.patronen.map((p) => `
+    <div class="patroon">
+      <div class="p-head">
+        <span class="p-code">${p.code}</span>
+        <span class="p-count">${p.aantal}× binnen ${d.venster} trades</span>
+      </div>
+      <div class="p-desc">${p.omschrijving}</div>
+      <div class="p-meta">Trade ${p.van_trade} t/m ${p.tot_trade} · ${p.totaal}× in totaal</div>
+      <div class="p-fix"><b>Regel:</b> ${p.correctie}</div>
+    </div>`).join("") + `</div>`;
+}
+
+function renderCharts(d) {
+  if (fcharts.t) fcharts.t.destroy();
+  fcharts.t = new Chart(document.getElementById("cTrend"), {
+    type: "line",
+    data: { labels: d.reeks.map((r) => r.datum), datasets: [{
+      label: "Fouten per trade", data: d.reeks.map((r) => r.per_trade),
+      borderColor: FC.amber, borderWidth: 2, pointRadius: 4,
+      pointBackgroundColor: FC.amber, tension: 0.25, fill: false,
+    }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false },
+      tooltip: { callbacks: { label: (i) => i.parsed.y + " fouten per trade" } } },
+      scales: { x: { grid: { color: FC.grid } },
+                y: { grid: { color: FC.grid }, beginAtZero: true } } },
+  });
+
+  const g = d.per_groep.filter((x) => x.aantal > 0);
+  if (fcharts.g) fcharts.g.destroy();
+  fcharts.g = new Chart(document.getElementById("cGroep"), {
+    type: "bar",
+    data: { labels: g.map((x) => x.groep + " — " + x.label), datasets: [{
+      label: "Fouten", data: g.map((x) => x.aantal), backgroundColor: FC.blue, borderRadius: 4,
+    }] },
+    options: { maintainAspectRatio: false, indexAxis: "y",
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { color: FC.grid }, ticks: { precision: 0 }, beginAtZero: true },
+                y: { grid: { display: false } } } },
+  });
+}
+
+function renderTable(d) {
+  const body = document.getElementById("codeBody");
+  if (!d.alle.length) {
+    body.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">
+      Nog geen fouten gelogd. 🎉</td></tr>`;
+    return;
+  }
+  body.innerHTML = d.alle.map((c) => `
+    <tr>
+      <td><span class="tag fout ${c.is_patroon ? "patroon" : ""}">${c.code}</span></td>
+      <td style="text-align:left">${c.omschrijving}</td>
+      <td class="mono">${c.aantal}</td>
+      <td class="mono" title="${c.trades_geleden} trades geleden">${c.laatste_datum}</td>
+      <td style="text-align:left;color:var(--muted)">${c.correctie}</td>
+    </tr>`).join("");
+}
+
+boot();
+
+
+/* Terugkerende-patroondetector op tags (ronde 3, punt 6). */
+async function renderTagPatronen() {
+  const box = document.getElementById("tagPatronen");
+  if (!box) return;
+  let d;
+  try { d = await api("/api/stats?deel=patronen"); } catch (e) { return; }
+  const t = d.terugkerend;
+  if (!t || !t.patronen.length) {
+    box.innerHTML = `<div class="empty wachtend"><b>Nog geen patroon.</b>
+      <span>${t ? t.samenvatting : "Tag je trades kort, dan ziet de journal herhaling."}</span></div>`;
+    return;
+  }
+  box.innerHTML = `<p class="hint" style="margin-bottom:10px"><b>${t.samenvatting}</b></p>` +
+    t.patronen.map((p) => `
+      <div class="tagpat ${p.kostend ? "kost" : "helpt"}">
+        <div class="tagpat-kop">
+          <b>${p.tag}</b>
+          <span class="tagpat-n">${p.n}×</span>
+          <span class="tagpat-eur ${p.netto_eur >= 0 ? "pos" : "neg"}">
+            ${p.netto_eur >= 0 ? "+" : ""}${p.netto_eur.toFixed(2)}</span>
+        </div>
+        <div class="tagpat-tekst">${p.oordeel}</div>
+      </div>`).join("");
+}
+renderTagPatronen();

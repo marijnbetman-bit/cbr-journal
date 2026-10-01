@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notitieboek — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="topbar">
+    <span class="mono" style="color:var(--muted);font-size:13px;">
+      <span class="blink-dot">●</span> notitieboek
+    </span>
+    <input type="search" id="zoek" placeholder="zoeken in je notities…" style="width:240px" />
+    <div class="spacer"></div>
+  </div>
+
+  <div class="container">
+    <p class="sub" style="max-width:70ch">
+      Voor alles wat niet aan één trade hangt: marktobservaties, ideeën, iets uit een video,
+      een vraag om later uit te zoeken. Tags die je hier gebruikt komen ook terug bij je trades.
+    </p>
+
+    <div class="panel notitie-form">
+      <div class="rij">
+        <label class="field"><span class="lbl">Datum</span>
+          <input type="date" id="nDatum" /></label>
+        <label class="field" style="flex:2 1 320px"><span class="lbl">Titel</span>
+          <input type="text" id="nTitel" placeholder="waar gaat het over?" style="width:100%" /></label>
+      </div>
+      <label class="field"><span class="lbl">Notitie</span>
+        <textarea id="nTekst" rows="4" style="width:100%"></textarea></label>
+      <label class="field"><span class="lbl">Tags (komma-gescheiden)</span>
+        <input type="text" id="nTags" placeholder="bv. sweep van high, na nieuws" style="width:100%" /></label>
+      <div class="chips" id="tagSuggesties"></div>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn btn-primary" id="nSave">Opslaan</button>
+        <button class="btn" id="nNieuw" style="display:none">Nieuwe notitie</button>
+      </div>
+    </div>
+
+    <div class="section-title" id="notitiesTitel">Notities</div>
+    <div id="notitieLijst"></div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/notities.js"></script>
+</body>
+</html>

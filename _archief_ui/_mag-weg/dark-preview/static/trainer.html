@@ -1,0 +1,1196 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<style>html,body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>CBR Setup Trainer — Fase 2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+:root{
+  --bg:#f7f4ef; --surface:#fff; --surface-2:#efebe3;
+  --text:#181c25; --text-2:#4a5263; --text-3:#868f9f;
+  --border:#ddd7cd; --border-2:#e8e3da;
+  --bull:#0d9668; --bear:#dc2f4e; --shift:#6d4dea; --entry:#b07d05;
+  --ok-bg:rgba(13,150,104,.06); --no-bg:rgba(220,47,78,.055); --shift-bg:rgba(109,77,234,.06);
+
+  /* jouw TradingView — vast in beide thema's */
+  --tv-bg:#ffffff; --tv-grid:#e9ecf2; --tv-axis:#9aa1b0; --tv-text:#131722;
+  --tv-up:#2962ff; --tv-down:#0b0e11;
+  --tv-level:#131722; --tv-fib:#089981; --tv-sep:#f23645; --tv-draw:#6d4dea;
+  --r:11px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b0e13; --surface:#141822; --surface-2:#1a1f2a;
+    --text:#e3e6ed; --text-2:#98a2b5; --text-3:#606a7c;
+    --border:#1f2531; --border-2:#1a1f2a;
+    --bull:#16c095; --bear:#ff5570; --shift:#a78bfa; --entry:#eab308;
+    --ok-bg:rgba(22,192,149,.08); --no-bg:rgba(255,85,112,.08); --shift-bg:rgba(167,139,250,.08);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b0e13; --surface:#141822; --surface-2:#1a1f2a;
+  --text:#e3e6ed; --text-2:#98a2b5; --text-3:#606a7c;
+  --border:#1f2531; --border-2:#1a1f2a;
+  --bull:#16c095; --bear:#ff5570; --shift:#a78bfa; --entry:#eab308;
+  --ok-bg:rgba(22,192,149,.08); --no-bg:rgba(255,85,112,.08); --shift-bg:rgba(167,139,250,.08);
+}
+
+*{box-sizing:border-box}
+body{
+  font-family:'Outfit',system-ui,-apple-system,'Segoe UI',sans-serif;
+  background:var(--bg); color:var(--text);
+  padding-inline:16px; padding-block:22px 60px; margin:0; line-height:1.55;
+}
+.page{max-width:620px;margin:0 auto}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+
+/* ── kop ── */
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:6px}
+h1{font-size:clamp(22px,5.5vw,28px);font-weight:800;letter-spacing:-.025em;margin:0;line-height:1.15}
+h1 .a{color:var(--shift)}
+.score{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:13px;color:var(--text-3);white-space:nowrap}
+.score b{color:var(--bull);font-weight:700}
+.lead{font-size:14px;color:var(--text-2);margin:0 0 14px}
+
+/* ── voortgang ── */
+.bar{display:flex;gap:3px;margin-bottom:16px}
+.pip{flex:1;height:4px;border-radius:2px;background:var(--border)}
+.pip.ok{background:var(--bull)} .pip.no{background:var(--bear)} .pip.now{background:var(--shift)}
+
+/* ── scenariokop ── */
+.scen{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:10px}
+.scen .n{
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:700;
+  color:var(--shift);background:var(--shift-bg);padding:3px 8px;border-radius:5px;
+}
+.scen .t{font-size:15px;font-weight:600;flex:1;min-width:0}
+.scen .k{
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;font-weight:700;
+  color:var(--text-2);background:var(--surface-2);padding:3px 9px;border-radius:5px;
+  border:1px solid var(--border-2);
+}
+
+/* ── contextbalk: wat je vóór de sessie al wist ── */
+.ctx{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
+.ctx-r{display:flex;align-items:center;gap:7px;background:var(--surface);
+  border:1px solid var(--border);border-radius:100px;padding:5px 11px}
+.ctx-k{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;
+  color:var(--text-3);letter-spacing:.03em}
+.ctx-v{font-size:11.5px;font-weight:700}
+.ctx-v.bull{color:var(--bull)} .ctx-v.bear{color:var(--bear)}
+.ctx-v.warn{color:var(--entry)} .ctx-v.no{color:var(--bear)}
+.ctx-v.ok{color:var(--text-2);font-weight:500}
+.fb-poort{font-size:13px;color:var(--text-2);margin:0 0 9px;padding:8px 11px;
+  border-radius:7px;background:var(--surface-2);line-height:1.5}
+.fb-poort b{color:var(--shift)}
+
+/* ── chart ── */
+.chart{
+  background:var(--tv-bg);border:1px solid var(--border);
+  border-radius:var(--r);padding:6px 4px 2px;margin-bottom:10px;
+  position:relative;overflow:hidden;
+}
+.chart svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.hint{
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;
+  color:var(--tv-draw);margin:-8px 0 12px;min-height:15px;
+}
+
+/* ── tekengereedschap ── */
+.tools{
+  display:flex;gap:5px;margin-bottom:10px;
+  overflow-x:auto;padding-bottom:3px;scrollbar-width:none;
+}
+.tools::-webkit-scrollbar{display:none}
+.tool{flex:0 0 auto;white-space:nowrap}
+.tool{
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;font-weight:500;
+  padding:6px 11px;border-radius:100px;cursor:pointer;
+  background:var(--surface);color:var(--text-2);
+  border:1px solid var(--border);transition:all .14s ease;
+}
+.tool:hover{border-color:var(--shift)}
+.tool.on{background:var(--shift);border-color:var(--shift);color:#fff}
+.tool.wis{color:var(--text-3)}
+.tool:focus-visible{outline:2px solid var(--shift);outline-offset:2px}
+
+/* ── beslissing ── */
+.acts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.act{
+  font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;letter-spacing:.01em;
+  padding:15px 6px;border-radius:9px;cursor:pointer;border:2px solid transparent;
+  transition:transform .1s ease,opacity .14s ease;
+}
+.act:active{transform:scale(.97)}
+.act:disabled{opacity:.35;cursor:default}
+.act.buy{background:var(--tv-up);color:#fff}
+.act.sell{background:var(--tv-down);color:#fff}
+.act.wait{background:transparent;color:var(--shift);border-color:var(--shift)}
+.act:focus-visible{outline:2px solid var(--shift);outline-offset:3px}
+
+/* ── feedback ── */
+.fb{border-radius:var(--r);padding:18px;margin-bottom:14px}
+.fb.ok{background:var(--ok-bg);border-left:3px solid var(--bull)}
+.fb.no{background:var(--no-bg);border-left:3px solid var(--bear)}
+.fb-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+.fb-v{font-size:17px;font-weight:700}
+.fb.ok .fb-v{color:var(--bull)} .fb.no .fb-v{color:var(--bear)}
+.fb-a{
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;
+  color:var(--text-3);
+}
+.fb p{font-size:14px;color:var(--text-2);margin:0;line-height:1.6}
+.fb .ref{
+  font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;
+  color:var(--text-3);display:block;margin-top:10px;
+}
+
+.next{
+  width:100%;font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;
+  padding:15px;border-radius:9px;cursor:pointer;border:none;
+  background:var(--shift);color:#fff;
+}
+.next:active{transform:scale(.99)}
+.next.drill{background:transparent;color:var(--shift);border:2px solid var(--shift)}
+
+/* ── slot ── */
+.done{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:26px 22px}
+.done h2{font-size:20px;font-weight:700;margin:0 0 4px}
+.done .big{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:44px;font-weight:700;line-height:1;margin:14px 0 6px;color:var(--shift);
+}
+.done p{font-size:14px;color:var(--text-2);margin:0 0 12px;line-height:1.6}
+.done .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0}
+.done .cell{background:var(--surface-2);border-radius:8px;padding:12px 14px}
+.done .cell .k{font-size:11.5px;color:var(--text-3);margin-bottom:3px}
+.done .cell .v{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:18px;font-weight:700}
+.note{
+  background:var(--shift-bg);border-left:3px solid var(--shift);
+  border-radius:8px;padding:14px 16px;font-size:13.5px;color:var(--text-2);line-height:1.55;
+}
+.note b{color:var(--shift)}
+
+@media(max-width:400px){
+  .act{font-size:13px;padding:14px 4px}
+  .tool{font-size:10.5px;padding:6px 9px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="page">
+
+  <div class="top">
+    <h1>Setup <span class="a">Trainer</span></h1>
+    <div class="score mono" id="score">0 / 0</div>
+  </div>
+  <p class="lead">Tien charts uit negenenvijftig. De balk boven de chart is wat je vóór de sessie al wist — kijk daar eerst, niet naar de candles.</p>
+
+  <div class="bar" id="bar"></div>
+
+  <div id="game">
+    <div class="scen">
+      <span class="n mono" id="num">01</span>
+      <span class="t" id="titel">—</span>
+      <span class="k mono" id="klok">—</span>
+    </div>
+
+    <div class="ctx" id="ctx"></div>
+    <div class="chart" id="chart"></div>
+
+    <div class="tools" id="tools">
+      <button class="tool" data-t="bos">BOS</button>
+      <button class="tool" data-t="ext">Extension</button>
+      <button class="tool" data-t="fib">50% retrace</button>
+      <button class="tool" data-t="fibbos">50% op BOS</button>
+      <button class="tool wis" data-t="wis">wissen</button>
+    </div>
+    <div class="hint" id="hint"></div>
+
+    <div class="acts">
+      <button class="act buy"  data-a="buy">BUY</button>
+      <button class="act sell" data-a="sell">SELL</button>
+      <button class="act wait" data-a="wait">WAIT OUT</button>
+    </div>
+
+    <div id="fbhost"></div>
+  </div>
+
+  <div id="einde" hidden></div>
+</div>
+
+<script>
+(function(){
+/* ═══════════ scenario's — allemaal terug te voeren op je eigen week ═══════════
+   c     = candles tot het beslismoment   [open, high, low, close]
+   na    = wat er daarna gebeurde (wordt pas onthuld na je antwoord)
+   lvl   = vorige 1hr high of low
+   swing = het swingpunt dat wel/niet gebroken wordt
+   f50   = het 50%-niveau van de shift (null als er geen shift is)         */
+
+var S=[
+{n:'Bearish A-setup', tijd:'11:23', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:4, swing:97, f50:98.2, ans:'sell',
+ c:[[88,90,87,89.5],[89.5,92,89,91.5],[91.5,94,91,93.5],[93.5,96,93,95.5],
+    [95.5,98.5,95,98],[98,101.5,97.8,101],[101,103.5,100.5,103],[103,104.2,102,102.5],
+    [102.5,103,99.5,100],[100,100.5,97,97.5],[97.5,99,97.2,98.8],
+    [98.8,101.5,98.5,101.2],[101.2,102.2,100.5,101],
+    [101,101.3,98,98.3],[98.3,98.5,95,95.3],[95.3,96,94.2,94.5],
+    [94.5,96.5,94.4,96.2],[96.2,98.4,96,98.2]],
+ na:[[98.2,98.4,95.5,95.8],[95.8,96,93,93.3],[93.3,93.5,90.5,91],[91,91.2,88.9,89.1]],
+ why:'Alle zes poorten groen. Prijs brak boven de vorige 1hr high, zette een swing low neer, maakte daarna een lager hoog, en sloot met een body ónder die swing low — dat is de shift. De retrace kwam netjes terug op 50% van de shift-beweging. Dit is je A-setup: hier hoor je te verkopen.',
+ ref:'Zelfde structuur als trade 18'},
+
+{n:'Range', tijd:'11:14', bias:'bearish', dxy:'invers', rebal:false, lvl:102, lvlL:'vorige 1hr high', sep:3, swing:null, f50:null, ans:'wait',
+ c:[[92,94,91.5,93.5],[93.5,96,93,95.5],[95.5,98,95,97.5],[97.5,100.5,97,100.2],
+    [100.2,101,99.8,100.5],[100.5,100.9,98.2,98.6],
+    [98.6,100.6,98.4,100.2],[100.2,100.8,99,99.4],
+    [99.4,99.8,96.6,97],[97,99.4,96.8,99],
+    [99,100.7,98.7,100.3],[100.3,100.9,98.9,99.3],
+    [99.3,99.7,97.2,97.6],[97.6,99.6,97.4,99.2]],
+ na:[[99.2,100.4,98.8,99.5],[99.5,99.9,97.5,97.9],[97.9,99.8,97.7,99.4],[99.4,100.2,98.5,98.9]],
+ why:'De vorige 1hr high is nooit geraakt — poort 2 staat al op rood. En binnen de beweging wordt geen enkel swingpunt met een close gebroken: elke dip wordt meteen teruggekocht. Dit is een range waarin de prijs heen en weer kaatst, geen shift. Je zou de onderkant van een range verkopen.',
+ ref:'Dit is trade 17 · −5,47'},
+
+{n:'Bullish A-setup', tijd:'11:36', bias:'bullish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr low', sep:4, swing:103, f50:102, ans:'buy',
+ c:[[112,113,111,111.5],[111.5,112,109,109.5],[109.5,110,107,107.5],[107.5,108,104.5,105],
+    [105,105.5,101.5,102],[102,102.5,98.5,99],[99,99.5,96.5,97],[97,98,95.8,97.5],
+    [97.5,100.5,97.3,100],[100,103,99.8,102.5],[102.5,102.8,101,101.3],
+    [101.3,101.5,98.5,98.8],[98.8,99.5,97.8,99.2],
+    [99.2,102,99,101.8],[101.8,105.5,101.5,105.2],[105.2,106.2,104.5,105.5],
+    [105.5,105.7,103,103.4],[103.4,103.6,101.8,102]],
+ na:[[102,104.5,101.9,104.2],[104.2,106.5,103.8,106.2],[106.2,109,106,108.7],[108.7,111.6,108.4,111.2]],
+ why:'Precies de spiegeling. Sweep onder de vorige 1hr low, de bounce zet een swing high neer, de pullback blijft boven de sweep-low, en dan sluit een body bóven die swing high. Retrace terug naar 50% van de shift. Alles bevestigd — dit is een koop.',
+ ref:'De bullish variant uit de guide'},
+
+{n:'Overextensie zonder BoS', tijd:'11:41', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:3, swing:null, f50:null, ans:'wait',
+ c:[[94,96,93.5,95.5],[95.5,97.5,95,97],[97,99,96.5,98.5],[98.5,100.8,98.2,100.4],
+    [100.4,102,100,101.6],[101.6,102.4,100.9,102.1],
+    [102.1,103.3,101.6,102.8],[102.8,103.1,101.9,102.4],
+    [102.4,104,102.1,103.6],[103.6,104.2,102.9,103.3],
+    [103.3,104.6,103,104.2],[104.2,104.8,103.5,104],
+    [104,105.3,103.8,104.9]],
+ na:[[104.9,106.2,104.6,105.8],[105.8,107,105.2,106.6],[106.6,107.4,105.9,106.3],[106.3,108,106,107.6]],
+ why:'De extensie is er wel: prijs brak boven de vorige 1hr high. Maar er wordt geen swing low gevormd die daarna gebroken wordt — je ziet alleen kleine pauzes in een trend die gewoon doorloopt. Poort 2 groen, poort 4 rood. En kijk waar de prijs daarna heen ging.',
+ ref:'Dit is trade 20 · −7,15, je duurste van de week'},
+
+{n:'Wick door het niveau', tijd:'11:19', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:4, swing:97, f50:null, ans:'wait',
+ c:[[89,91,88,90.5],[90.5,93,90,92.5],[92.5,96,92,95.5],[95.5,98.5,95,98],
+    [98,101,97.7,100.6],[100.6,103,100.2,102.6],[102.6,103.6,101.8,102.2],
+    [102.2,102.6,99.4,99.8],[99.8,100.2,97,97.4],
+    [97.4,99.2,97.2,98.9],[98.9,101.2,98.6,100.8],[100.8,101.4,99.6,100],
+    [100,100.3,97.6,98],[98,98.3,96.2,97.8]],
+ na:[[97.8,99.6,97.6,99.2],[99.2,100.8,99,100.4],[100.4,101.6,100.1,101.2],[101.2,102.4,100.8,102]],
+ why:'Kijk naar de laatste candle vóór je beslissing: de wick ging wél door de swing low heen, maar de body sloot er weer bóven. Dat is een test die onmiddellijk is teruggekocht — het tegenovergestelde van wat je wil zien. Een wick is geen break; er moet een candle achter dat niveau sluiten.',
+ ref:'De regel uit "De break moet écht zijn"'},
+
+{n:'Shift zonder overextensie', tijd:'11:28', bias:'bearish', dxy:'invers', rebal:false, lvl:106, lvlL:'vorige 1hr high', sep:3, swing:97.4, f50:null, ans:'wait',
+ c:[[93,95,92.5,94.5],[94.5,97,94,96.5],[96.5,99,96,98.5],[98.5,101,98,100.6],
+    [100.6,102.8,100.2,102.4],[102.4,103.2,101.6,102],
+    [102,102.4,99.2,99.6],[99.6,100,97.4,97.8],
+    [97.8,99.6,97.6,99.2],[99.2,101,98.9,100.6],[100.6,101.2,99.4,99.8],
+    [99.8,100.1,97.2,97.6],[97.6,97.9,95.4,95.8]],
+ na:[[95.8,97.8,95.6,97.4],[97.4,99.6,97.2,99.2],[99.2,101.8,99,101.4],[101.4,104,101.1,103.6],[103.6,106.2,103.3,105.8]],
+ why:'De shift zelf is perfect: swing low, lager hoog, harde body-close eronder. Maar de vorige 1hr high is nooit geraakt — er ligt dus nog onaangeroerde liquiditeit bóven je. En precies daar ging de prijs naartoe. Dit is de duurste soort fout, want technisch zie je hem goed.',
+ ref:'Dit is trade 16 · −4,71 — geen vorige candle break = geen trade'},
+
+{n:'Bearish setup, retrace compleet', tijd:'11:33', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:2, swing:99, f50:98.4, ans:'sell',
+ c:[[95,96.5,94.5,96],[96,98,95.6,97.6],[97.6,100.4,97.2,100],[100,102.6,99.7,102.2],
+    [102.2,105.4,101.9,105],[105,105.8,103.6,104],
+    [104,104.4,101,101.4],[101.4,101.8,99,99.4],
+    [99.4,101.6,99.2,101.2],[101.2,102.4,100.6,101],
+    [101,101.3,98.4,98.8],[98.8,99.1,96.4,96.8],
+    [96.8,97.2,94.4,94.8],[94.8,98.6,94.6,98.4]],
+ na:[[98.4,98.6,95.8,96.2],[96.2,96.5,93.6,94],[94,94.3,91.4,91.8],[91.8,92.1,89.2,89.6]],
+ why:'Diepe extensie voorbij de vorige 1hr high, een duidelijke swing low, een lager hoog, en dan een scherpe body-close onder dat swingpunt. De retrace liep terug tot 50% van de shift-beweging. Poort 1 tot en met 6 allemaal groen. Als je hier "wait" drukte: dit is precies de setup waar je op wacht, dus die moet je nemen.',
+ ref:'Een A-setup met een diepere sweep'},
+
+{n:'Geen retrace', tijd:'11:47', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:3, swing:98.2, f50:97.4, ans:'wait',
+ c:[[90,92,89.5,91.5],[91.5,94,91,93.5],[93.5,96.5,93,96],[96,99,95.6,98.6],
+    [98.6,101.4,98.2,101],[101,103.8,100.6,103.4],[103.4,104.4,102.4,102.8],
+    [102.8,103.2,100.2,100.6],[100.6,101,98.2,98.6],
+    [98.6,100.4,98.4,100],[100,101.6,99.6,101.2],
+    [101.2,101.5,98.8,99.2],[99.2,99.5,96.6,97],
+    [97,97.1,94.8,95.2],[95.2,95.4,93.2,93.6]],
+ na:[[93.6,93.9,91.4,91.8],[91.8,92,89.6,90],[90,90.3,88,88.4],[88.4,88.7,86.6,87]],
+ why:'De setup klopt helemaal: extensie, swing low, body-close eronder. Maar er is geen retrace naar 50% geweest — prijs liep meteen door. Zonder retrace moet je je entry gokken en wordt je RR fors slechter. Ja, hij liep door zonder jou, en ja, dat voelt rot. Het blijft de juiste keuze.',
+ ref:'Dit is trade 19 — de trade die je bewust liet lopen'},
+
+{n:'Bullish setup na sweep', tijd:'11:26', bias:'bullish', dxy:'invers', rebal:false, lvl:98, lvlL:'vorige 1hr low', sep:3, swing:98.6, f50:99.6, ans:'buy',
+ c:[[106,107,104.6,105],[105,105.4,102.6,103],[103,103.4,100.4,100.8],[100.8,101.2,97.6,98],
+    [98,98.4,94.6,95],[95,95.4,93,93.4],
+    [93.4,96.4,93.2,96],[96,98.6,95.8,98.2],
+    [98.2,98.6,96.2,96.6],[96.6,97,95.2,95.6],
+    [95.6,98.4,95.4,98],[98,102.4,97.8,102],
+    [102,104,101.4,103.6],[103.6,103.8,99.5,99.6]],
+ na:[[99.6,101.8,99.4,101.6],[101.6,103.8,101.2,103.4],[103.4,105.6,103,105.2],[105.2,107.4,104.8,107]],
+ why:'Sweep ver onder de vorige 1hr low, de bounce zet een swing high neer, het hoger laag blijft boven de sweep-low, en dan sluit een body boven dat swingpunt. De retrace kwam terug op 50%. Dit is een koop — en als je hier "wait" koos, kijk dan of je het swingpunt wel had aangewezen.',
+ ref:'De spiegeling van scenario 7'},
+
+{n:'De hoop-chart', tijd:'11:31', bias:'bullish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr low', sep:2, swing:100.8, f50:null, ans:'wait',
+ c:[[104,104.6,102.8,103.2],[103.2,103.6,101.4,101.8],[101.8,102.2,99.6,100],
+    [100,100.4,97.8,98.2],[98.2,98.6,96.4,96.8],
+    [96.8,99.2,96.6,98.8],[98.8,100.6,98.5,100.2],
+    [100.2,100.8,99.4,99.8],[99.8,100.5,99.2,100.1],
+    [100.1,100.7,99.5,99.9],[99.9,100.4,99.3,100],
+    [100,100.6,99.4,99.7],[99.7,100.3,99.2,100]],
+ na:[[100,100.2,98.6,98.9],[98.9,99.1,97.4,97.7],[97.7,97.9,96.2,96.5],[96.5,96.8,95,95.3]],
+ why:'Dit is 10 september, 11:08 tot 11:38. De sweep en de bounce zijn er, maar het swingpunt boven je is nooit met een close gebroken — de prijs hing een half uur zijwaarts net eronder. Je hebt hier drie keer naar gekeken en niets gedaan. Kijk wat er daarna gebeurde: een long was er gewoon uitgetikt.',
+ ref:'Je eigen ochtend, vanmorgen'},
+
+{n:'Soft break', tijd:'11:29', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:4, swing:97, f50:null, ans:'wait',
+ c:[[90,92,89.5,91.5],[91.5,94,91,93.5],[93.5,96,93,95.5],[95.5,98,95,97.6],
+    [97.6,100.4,97.2,100],[100,102.4,99.7,102],[102,103.4,101.5,103],[103,103.8,102.3,102.7],
+    [102.7,103,100.4,100.8],[100.8,101.1,98.6,99],[99,99.3,97,97.3],
+    [97.3,99.4,97.1,99],[99,100.2,98.6,99.6],
+    [99.6,99.8,97.1,97.2],[97.2,97.4,96.6,96.9]],
+ na:[[96.9,98.4,96.7,98.2],[98.2,99.8,98,99.4],[99.4,100.6,99.1,100.2],[100.2,101.4,99.8,101]],
+ why:'Er is een close onder het swingpunt — maar kijk hoe klein. De body is een fractie, en de close ligt nauwelijks onder het niveau. Dat is geen doorbraak, dat is een niveau dat wordt afgetast. Je eigen observatie geldt hier: prijs steeg te lang en te gelijkmatig vóór de terugval, en dan wordt de shift slap.',
+ ref:'Dit is trade 8 · −3,40 — soft break'},
+
+{n:'Bullish A-setup, diepe sweep', tijd:'11:18', bias:'bullish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr low', sep:3, swing:98.8, f50:100.1, ans:'buy',
+ c:[[110,111,108.6,109],[109,109.4,106.4,106.8],[106.8,107.2,103.6,104],[104,104.4,100.4,100.8],
+    [100.8,101.2,97,97.4],[97.4,97.8,94,94.4],[94.4,94.8,92.6,93],
+    [93,96.4,92.8,96],[96,98.8,95.8,98.4],
+    [98.4,98.8,96.8,97.2],[97.2,97.6,95.8,96.2],
+    [96.2,98.6,96,98.4],[98.4,102.4,98.2,102],
+    [102,104.4,100.6,101],[101,101.3,99.9,100.1]],
+ na:[[100.1,102.4,99.9,102],[102,104.6,101.6,104.2],[104.2,106.8,103.8,106.4],[106.4,109,106,108.6]],
+ why:'Een sweep van zeven punten onder de vorige 1hr low — daar lag een hoop liquiditeit. De bounce zet een swing high neer, de pullback blijft er ruim boven, en dan sluit een body er dwars doorheen. De retrace komt terug op 50% van die shift. Diepe sweeps geven vaak de schoonste setups.',
+ ref:'Zelfde vorm als trade 4, je eerste A'},
+
+{n:'Schone trend', tijd:'11:37', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:5, swing:null, f50:null, ans:'wait',
+ c:[[92,93.4,91.8,93.2],[93.2,94.6,93,94.4],[94.4,95.8,94.2,95.6],[95.6,97,95.4,96.8],
+    [96.8,98.2,96.6,98],[98,99.4,97.8,99.2],[99.2,100.6,99,100.4],
+    [100.4,101.8,100.2,101.6],[101.6,103,101.4,102.8],[102.8,104.2,102.6,104],
+    [104,105.4,103.8,105.2],[105.2,106.6,105,106.4],[106.4,107.8,106.2,107.6]],
+ na:[[107.6,109,107.4,108.8],[108.8,110.2,108.6,110],[110,111.4,109.8,111.2],[111.2,112.6,111,112.4]],
+ why:'De vorige 1hr high is gebroken, dus poort 2 staat groen. Maar dit is geen trending range met twee of meer legs — het is een schone trend zonder noemenswaardige pullback. Er ontstaat nergens een swingpunt, dus er valt ook niets te breken. Een reversal in een schone trend is in je eigen model verboden.',
+ ref:'Dit is trade 15 · −3,34 · crit 1'},
+
+{n:'Tweede sweep', tijd:'11:44', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:2, swing:100.4, f50:101.3, ans:'sell',
+ c:[[94,96,93.6,95.6],[95.6,98,95.2,97.6],[97.6,100.6,97.2,100.2],[100.2,101,99.4,99.8],
+    [99.8,100.2,97.6,98],[98,98.4,96.6,97],
+    [97,99.4,96.8,99],[99,102.6,98.8,102.2],[102.2,105.4,101.8,105],
+    [105,105.6,103,103.4],[103.4,103.8,100.4,100.8],
+    [100.8,102.8,100.6,102.4],[102.4,104.8,101.8,102.2],
+    [102.2,102.5,100,100.3],[100.3,100.5,97.8,98.1],
+    [98.1,101.5,97.9,101.3]],
+ na:[[101.3,101.5,98.6,98.9],[98.9,99.1,96.4,96.7],[96.7,97,94.2,94.5],[94.5,94.8,92,92.3]],
+ why:'De eerste poging boven de vorige 1hr high faalde en prijs viel helemaal terug — dat is op zichzelf geen reden om af te haken. De tweede poging ging veel dieper, en dáárna volgde het hele pakket: swing low, lager hoog, body-close eronder, retrace naar 50%. Een mislukte eerste aanval maakt de tweede niet ongeldig.',
+ ref:'Valide A-setup na een fake-out'},
+
+{n:'Retrace te diep', tijd:'11:21', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:3, swing:98.6, f50:99.4, ans:'wait',
+ c:[[91,93,90.6,92.6],[92.6,95,92.2,94.6],[94.6,97.4,94.2,97],[97,100.4,96.6,100],
+    [100,102.6,99.6,102.2],[102.2,104,101.4,103.6],[103.6,104.4,102.6,103],
+    [103,103.4,100.6,101],[101,101.4,98.6,99],
+    [99,101.2,98.8,100.8],[100.8,102,100.2,101.4],
+    [101.4,101.7,99,99.3],[99.3,99.6,96.8,97.1],
+    [97.1,99.4,96.9,99.2],[99.2,101.6,99,101.4]],
+ na:[[101.4,103.6,101.2,103.2],[103.2,104.8,102.8,104.4],[104.4,105.4,103.6,104],[104,105.8,103.6,105.4]],
+ why:'De shift was er echt: swing low gebroken met een body. Maar de retrace stopte niet op 50% — hij liep door de hele shift-beweging heen en zelfs terug boven het swingpunt waartegen je zou handelen. Daarmee is de structuur gerepareerd en de setup dood. Was je op 50% ingestapt, dan stond je nu al fors onder water.',
+ ref:'Retrace voorbij 100% = setup vervalt'},
+
+{n:'Te krappe RR', tijd:'11:52', bias:'bearish', dxy:'invers', rebal:false, lvl:100.8, lvlL:'vorige 1hr high', sep:3, swing:99.4, f50:100.1, tgt:100, ans:'wait',
+ c:[[98,99.2,97.6,99],[99,100.4,98.6,100.2],[100.2,101.4,99.8,101],[101,101.8,100.4,101.4],
+    [101.4,102.2,100.8,101.8],[101.8,102.4,101.2,101.6],
+    [101.6,101.9,100.2,100.5],[100.5,100.8,99.4,99.7],
+    [99.7,101.2,99.5,101],[101,101.6,100.4,100.8],
+    [100.8,101,99.2,99.4],[99.4,99.6,98.6,98.8],
+    [98.8,100.3,98.7,100.1]],
+ na:[[100.1,100.4,99.2,99.5],[99.5,100.6,99.3,100.3],[100.3,100.8,99.6,99.9],[99.9,100.9,99.7,100.6]],
+ why:'Structureel klopt het: extensie, swing low, body-close eronder, retrace naar 50%. Maar kijk naar de ruimte. Je SL hoort boven het lager hoog, dus rond 101,9. Je target — 50% van de beweging sinds de 1hr candle — ligt op ongeveer 100, vlak ónder je entry van 100,1. Je riskeert bijna twee punten om er een tiende te verdienen. Poort 6 op rood.',
+ ref:'Extensie te ondiep, shift te laat'},
+
+{n:'Perfecte setup', tijd:'12:37', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:3, swing:98, f50:99.1, ans:'wait',
+ c:[[92,94,91.6,93.6],[93.6,96.4,93.2,96],[96,99,95.6,98.6],[98.6,101.4,98.2,101],
+    [101,103.8,100.6,103.4],[103.4,104.6,102.4,103],
+    [103,103.4,100,100.4],[100.4,100.8,98,98.4],
+    [98.4,100.6,98.2,100.2],[100.2,101.8,99.6,101.2],
+    [101.2,101.5,98.8,99.2],[99.2,99.5,96.4,96.7],
+    [96.7,99.4,96.5,99.1]],
+ na:[[99.1,99.4,96.6,96.9],[96.9,97.2,94.4,94.7],[94.7,95,92.6,92.9],[92.9,93.2,90.8,91.1]],
+ why:'Structureel is dit een A-setup: extensie, swing low, lager hoog, harde body-close, retrace op 50%. En het maakt niet uit. Kijk naar de klok: 12:37. Je zit buiten je venster van 11:00 tot 12:00. Poort 1 is een poort, geen voorkeur — al je criteria zijn binnen dat uur gemeten. Ja, hij liep. Nee, het was niet jouw trade.',
+ ref:'Poort 1 · buiten het 2e Londense uur'},
+
+{n:'Shift de verkeerde kant op', tijd:'11:16', bias:'bullish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr low', sep:3, swing:99.4, f50:null, ans:'wait',
+ c:[[105,105.8,103.6,104],[104,104.4,102,102.4],[102.4,102.8,100.4,100.8],[100.8,101.2,98.6,99],
+    [99,99.4,96.8,97.2],[97.2,97.6,95.4,95.8],
+    [95.8,98,95.6,97.8],[97.8,99.4,97.4,99],
+    [99,99.3,97,97.3],[97.3,98.6,97.1,98.2],
+    [98.2,98.5,96.4,96.7],[96.7,97,94.6,94.9],
+    [94.9,97.2,94.7,97]],
+ na:[[97,97.3,94.6,94.9],[94.9,95.2,92.8,93.1],[93.1,93.4,91,91.3],[91.3,91.6,89.4,89.7]],
+ why:'De sweep onder de vorige 1hr low is er, en dat maakt het verleidelijk om naar een long te zoeken. Maar de shift ging de andere kant op: prijs brak het hoger laag naar beneden, niet de swing high naar boven. Een sweep vertelt je alleen dát er liquiditeit is opgehaald. De shift vertelt je de richting — en die zegt hier omlaag, wat gewoon continuatie is en niet jouw omkering.',
+ ref:'Sweep ≠ richting'},
+
+{n:'Laag volume', tijd:'11:39', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:3, swing:null, f50:null, ans:'wait',
+ vol:[.42,.38,.34,.22,.16,.24,.18,.2,.15,.22,.17,.24,.19,.21,.16,.18,.2],
+ c:[[96,97.4,95.6,97.2],[97.2,98.6,96.8,98.4],[98.4,99.8,98,99.6],[99.6,100.8,99.2,100.4],
+    [100.4,101.2,99.8,100.2],[100.2,101.4,99.6,101],
+    [101,101.6,100.2,100.6],[100.6,101.8,100,101.4],
+    [101.4,102,100.4,100.8],[100.8,102.2,100.2,101.6],
+    [101.6,102.4,100.6,101],[101,102.6,100.4,102],
+    [102,102.8,100.8,101.2]],
+ na:[[101.2,102.4,100.2,100.6],[100.6,101.8,99.8,100.2],[100.2,101.2,99,99.4],[99.4,100.4,98.4,98.8]],
+ why:'De extensie boven de vorige 1hr high staat er technisch, maar kijk naar het volume eronder: elke push erboven gaat op dunne balken en wordt meteen weer teruggehaald. Uit je eigen notitieboek: een goede overextensie beweegt op hoog volume, en laag volume dat steeds terugcorrigeert is een niveau dat wordt afgeknabbeld, geen liquiditeit die wordt opgehaald.',
+ ref:'Pre-conditie volume_hoog = nee'},
+
+{n:'Alles groen', tijd:'11:27', bias:'bullish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr low', sep:3, swing:99.4, f50:100.2, ans:'buy',
+ c:[[108,109,106.4,106.8],[106.8,107.2,104.4,104.8],[104.8,105.2,102,102.4],[102.4,102.8,99.6,100],
+    [100,100.4,96.6,97],[97,97.4,94.8,95.2],[95.2,95.6,93.4,93.8],
+    [93.8,96.6,93.6,96.2],[96.2,99.4,96,99],
+    [99,99.4,96.6,97],[97,97.4,95.8,96.2],
+    [96.2,99,96,98.6],[98.6,102.8,98.4,102.4],
+    [102.4,104.6,101.8,102.2],
+    [102.2,102.5,100.1,100.3]],
+ na:[[100.3,102.6,100.1,102.2],[102.2,105,101.8,104.6],[104.6,107.2,104.2,106.8],[106.8,109.4,106.4,109]],
+ why:'Sweep ver onder de vorige 1hr low, swing high neergezet door de bounce, hoger laag dat ruim boven de sweep blijft, een body-close dwars door dat swingpunt, en een retrace die netjes op 50% landt. Binnen het venster, ruime RR. Zes poorten groen. Dit is precies waar je de hele week op zit te wachten — dus koop je.',
+ ref:'De setup waar het allemaal om draait'},
+
+{n:'Scherpe shift', tijd:'11:24', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:3, swing:99, f50:98, ans:'sell',
+ c:[[91,93,90.6,92.6],[92.6,95.4,92.2,95],[95,98.4,94.6,98],[98,101.2,97.6,100.8],
+    [100.8,104,100.4,103.6],[103.6,105,102.8,104.4],[104.4,104.8,102.4,102.8],
+    [102.8,103.2,99,99.4],[99.4,102,99.2,101.6],[101.6,103,100.8,101.2],
+    [101.2,101.5,97.6,98],[98,98.2,93,93.3],[93.3,98.2,93.1,98]],
+ na:[[98,98.2,95,95.3],[95.3,95.5,92.4,92.7],[92.7,92.9,90,90.3],[90.3,90.5,87.8,88.1]],
+ why:'Geen enkele twijfel aan deze break. De candle die door de swing low gaat heeft een body van bijna vijf punten en sluit ver eronder — dat is verkopers die er doorheen walsen, niet een niveau dat wordt afgetast. Extensie, swing low, lager hoog, harde close, retrace op 50%. Alles staat er.',
+ ref:'Zo hoort een shift eruit te zien'},
+
+{n:'Dubbele bodem-sweep', tijd:'11:31', bias:'bullish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr low', sep:2, swing:99.2, f50:99.9, ans:'buy',
+ c:[[107,108,105.4,105.8],[105.8,106.2,103.4,103.8],[103.8,104.2,101,101.4],
+    [101.4,101.8,98.6,99],[99,101.4,98.8,101],[101,101.4,99,99.4],
+    [99.4,99.8,96,96.4],[96.4,96.8,93.4,93.8],
+    [93.8,96.6,93.6,96.2],[96.2,99.2,96,98.8],
+    [98.8,99.2,96.6,97],[97,97.4,95.6,96],
+    [96,98.8,95.8,98.6],[98.6,102.4,98.4,102],
+    [102,104.2,101.4,101.8],[101.8,102,99.8,99.9]],
+ na:[[99.9,102.4,99.7,102.2],[102.2,104.8,101.9,104.4],[104.4,107,104,106.6],[106.6,109.2,106.2,108.8]],
+ why:'De eerste duik onder de vorige 1hr low werd meteen teruggekocht — dat was nog geen setup. De tweede ging vijf punten dieper en dáár draaide het. Swing high, hoger laag dat ruim boven de sweep blijft, body-close erdoorheen, retrace op 50%. Twee pogingen betekent vaak dat de tweede de echte is.',
+ ref:'Valide long na een mislukte eerste sweep'},
+
+{n:'Laat in het venster', tijd:'11:56', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:3, swing:98.4, f50:98.9, ans:'sell',
+ c:[[93,95,92.6,94.6],[94.6,97.4,94.2,97],[97,100.2,96.6,99.8],[99.8,102.6,99.4,102.2],
+    [102.2,104.4,101.6,104],[104,104.8,102.6,103],
+    [103,103.4,100.2,100.6],[100.6,101,98.4,98.8],
+    [98.8,101.2,98.6,100.8],[100.8,102.2,100.2,100.6],
+    [100.6,100.9,98,98.3],[98.3,98.5,95.6,95.9],
+    [95.9,99,95.7,98.9]],
+ na:[[98.9,99.1,96.4,96.7],[96.7,96.9,94.2,94.5],[94.5,94.7,92,92.3],[92.3,92.5,90,90.3]],
+ why:'11:56 is laat, maar het is binnen. Je venster loopt tot 12:00 en daarbinnen gelden je regels onverkort — er is geen zone aan het eind waarin je voorzichtiger moet doen. De setup zelf is compleet: extensie, swing low, lager hoog, body-close, retrace op 50%. Vier minuten is genoeg.',
+ ref:'Binnen het venster telt als binnen'},
+
+{n:'Sterke body-close', tijd:'11:22', bias:'bullish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr low', sep:3, swing:98.6, f50:99.3, ans:'buy',
+ c:[[106,107,104.4,104.8],[104.8,105.2,102.4,102.8],[102.8,103.2,100,100.4],
+    [100.4,100.8,97.4,97.8],[97.8,98.2,94.6,95],[95,95.4,93.6,94],
+    [94,96.8,93.8,96.4],[96.4,98.6,96.2,98.2],
+    [98.2,98.6,96,96.4],[96.4,96.8,95.2,95.6],
+    [95.6,97.4,95.4,97.2],[97.2,102.6,97,102.2],
+    [102.2,103.4,101.4,101.8],[101.8,102,98.9,99]],
+ na:[[99,101.6,98.8,101.4],[101.4,104,101,103.6],[103.6,106.2,103.2,105.8],[105.8,108.4,105.4,108]],
+ why:'Kijk naar die ene candle die door de swing high gaat: vijf punten body, opent onderaan en sluit bovenaan. Dat is geen wick die er even overheen tikt, dat zijn kopers die het niveau overnemen en vasthouden tot de close. De retrace komt daarna netjes terug op 50% van die beweging.',
+ ref:'Conviction in de break-candle'},
+
+{n:'Hoog volume op de extensie', tijd:'11:19', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:2, swing:98.6, f50:99, ans:'sell',
+ vol:[.35,.45,.9,.95,.85,.5,.55,.6,.45,.4,.6,.8,.55,.6,.5,.45,.4],
+ c:[[94,96,93.6,95.6],[95.6,98.4,95.2,98],[98,101.4,97.6,101],
+    [101,104.2,100.6,103.8],[103.8,105.2,103,104.6],[104.6,105,102.8,103.2],
+    [103.2,103.6,100.4,100.8],[100.8,101.2,98.6,99],
+    [99,101.6,98.8,101.2],[101.2,102.6,100.6,101],
+    [101,101.3,98,98.3],[98.3,98.5,95.4,95.7],
+    [95.7,99.1,95.5,99]],
+ na:[[99,99.2,96.4,96.7],[96.7,96.9,94,94.3],[94.3,94.5,91.6,91.9],[91.9,92.1,89.4,89.7]],
+ why:'Vergelijk het volume onder de extensie met dat lage-volume scenario: hier gaan de balken door de doorbraak heen omhoog en blijven ze zwaar. Dat is wat je notitieboek een goede overextensie noemt — er is daadwerkelijk liquiditeit opgehaald in plaats van dat een niveau wordt afgeknabbeld. En de structuur erna klopt ook.',
+ ref:'Pre-conditie volume_hoog = ja'},
+
+{n:'Ondiepe retrace', tijd:'11:34', bias:'bullish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr low', sep:2, swing:98.4, f50:99.3, ans:'buy',
+ c:[[105,105.8,103.4,103.8],[103.8,104.2,101.6,102],[102,102.4,99.6,100],
+    [100,100.4,97.2,97.6],[97.6,98,95.2,95.6],[95.6,96,94,94.4],
+    [94.4,96.8,94.2,96.4],[96.4,98.4,96.2,98],
+    [98,98.4,96.4,96.8],[96.8,97.2,95.8,96.2],
+    [96.2,98.2,96,98],[98,101.6,97.8,101.2],
+    [101.2,102.8,100.6,101],[101,101.2,99.3,99.4]],
+ na:[[99.4,101.8,99.2,101.6],[101.6,104,101.2,103.6],[103.6,105.8,103.2,105.4],[105.4,107.6,105,107.2]],
+ why:'De retrace raakte 50% en draaide meteen — meer heb je niet nodig. 50% is een niveau waarop je entry ligt, geen zone die eerst overtuigend doorbroken moet worden. Een ondiepe reactie erop betekent meestal juist dat de kopers ongeduldig zijn. Poorten allemaal groen, dus je koopt.',
+ ref:'50% is een niveau, geen zone'},
+
+{n:'Trending range met drie legs', tijd:'11:41', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:4, swing:100, f50:99.4, ans:'sell',
+ c:[[96,98,95.6,97.6],[97.6,98.2,95.4,95.8],[95.8,98.6,95.6,98.4],[98.4,98.8,96,96.4],
+    [96.4,99.4,96.2,99.2],[99.2,102,99,101.6],
+    [101.6,104,101.2,103.6],[103.6,104.4,102.4,102.8],
+    [102.8,103.2,100,100.4],[100.4,102.8,100.2,102.4],
+    [102.4,103.4,101.4,101.8],[101.8,102,99,99.3],
+    [99.3,99.5,95.4,95.7],[95.7,99.6,95.5,99.4]],
+ na:[[99.4,99.6,96.8,97.1],[97.1,97.3,94.6,94.9],[94.9,95.1,92.4,92.7],[92.7,92.9,90.4,90.7]],
+ why:'Tel de legs vóór de extensie: omlaag, omhoog, omlaag. Dit is precies de trending range waar crit 1 om vraagt, en daarmee is de reversal toegestaan — in tegenstelling tot die schone trend waar er niets was om tegenin te draaien. De rest van de structuur volgt het boekje.',
+ ref:'crit 1 zichtbaar voldaan'},
+
+{n:'Retrace net voorbij 50%', tijd:'11:28', bias:'bullish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr low', sep:3, swing:99.4, f50:100, ans:'buy',
+ c:[[108,109,106.6,107],[107,107.4,104.6,105],[105,105.4,102.4,102.8],
+    [102.8,103.2,100.2,100.6],[100.6,101,97.4,97.8],[97.8,98.2,95,95.4],
+    [95.4,95.8,93.8,94.2],[94.2,97,94,96.6],
+    [96.6,99.4,96.4,99],[99,99.4,96.8,97.2],
+    [97.2,97.6,96,96.4],[96.4,98.8,96.2,98.6],
+    [98.6,102.8,98.4,102.4],[102.4,104,101.8,102.2],
+    [102.2,102.4,99.5,99.6]],
+ na:[[99.6,102,99.4,101.8],[101.8,104.4,101.4,104],[104,106.4,103.6,106],[106,108.4,105.6,108]],
+ why:'De retrace ging een fractie voorbij 50% en landde precies op de swing high die net gebroken was. Dat is een retest, geen mislukking — het niveau dat weerstand was, wordt nu steun. Vergelijk het met dat scenario waarin de retrace dwars door de hele shift heen liep en boven het swingpunt uitkwam: dáár was de structuur gerepareerd. Hier wordt hij juist bevestigd.',
+ ref:'Retest van het gebroken niveau'},
+
+{n:'Break neemt twee swings mee', tijd:'11:46', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:3, swing:99.2, f50:98.6, ans:'sell',
+ c:[[92,94.4,91.6,94],[94,96.8,93.6,96.4],[96.4,99.6,96,99.2],[99.2,102.4,98.8,102],
+    [102,104.6,101.6,104.2],[104.2,105.4,103.4,103.8],
+    [103.8,104.2,101.4,101.8],[101.8,102.2,99.6,100],
+    [100,102,99.8,101.6],[101.6,102,99.2,99.6],
+    [99.6,101.8,99.4,101.4],[101.4,101.8,100.2,100.6],
+    [100.6,100.9,95.4,95.7],[95.7,98.8,95.5,98.6]],
+ na:[[98.6,98.8,96,96.3],[96.3,96.5,93.6,93.9],[93.9,94.1,91.4,91.7],[91.7,91.9,89.4,89.7]],
+ why:'Er lagen twee swing lows onder de markt en de break-candle neemt ze allebei in één keer mee. Dat is een sterker signaal dan een close die net onder de eerste komt: alles wat daar aan orders lag is opgeruimd. Retrace daarna op 50% van die beweging.',
+ ref:'Meerdere niveaus in één close'},
+
+{n:'Retrace nog niet compleet', tijd:'11:26', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:3, swing:98.8, f50:99.1, ans:'wait',
+ c:[[93,95,92.6,94.6],[94.6,97.4,94.2,97],[97,100.2,96.6,99.8],[99.8,102.8,99.4,102.4],
+    [102.4,104.6,102,104.2],[104.2,105,103,103.4],
+    [103.4,103.8,100.6,101],[101,101.4,98.8,99.2],
+    [99.2,101.8,99,101.4],[101.4,102.8,100.8,101.2],
+    [101.2,101.5,98.2,98.5],[98.5,98.7,95.4,95.7],
+    [95.7,97.2,95.5,97]],
+ na:[[97,99.2,96.9,99],[99,99.2,96.6,96.9],[96.9,97.1,94.4,94.7],[94.7,94.9,92.4,92.7]],
+ why:'Dit wordt waarschijnlijk een trade — alleen nu nog niet. De shift is bevestigd, maar prijs staat op 97 en 50% van de shift-beweging ligt rond 99,1. Instappen op dit punt betekent een slechter niveau, een wijdere stop en dezelfde target. Wachten kost je hier niets: de retrace kwam er wel degelijk. "Wait" betekent lang niet altijd "nooit".',
+ ref:'Te vroeg is ook fout'},
+
+{n:'Whipsaw', tijd:'11:37', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:3, swing:null, f50:null, ans:'wait',
+ c:[[97,99.4,96.6,99],[99,101.6,98.6,101.2],[101.2,103,100.6,102.6],
+    [102.6,103.4,101,101.4],[101.4,101.8,98.6,99],[99,99.4,97.2,97.6],
+    [97.6,100.4,97.4,100.2],[100.2,102.6,100,102.2],
+    [102.2,102.6,99.8,100.2],[100.2,100.6,97.8,98.2],
+    [98.2,101,98,100.6],[100.6,101,98.4,98.8],
+    [98.8,101.2,98.6,101]],
+ na:[[101,101.4,98.8,99.2],[99.2,101.6,99,101.4],[101.4,101.8,99.2,99.6],[99.6,102,99.4,101.8]],
+ why:'Elke doorbraak wordt onmiddellijk teruggedraaid. Omlaag door een niveau, meteen weer erboven, dan weer eronder. Een shift betekent alleen iets als het gebroken niveau ook gebroken blíjft — hier wordt beide kanten om de beurt uitgestopt. Dit is chop, en het enige wat je hier verdient is spread.',
+ ref:'Beide kanten worden uitgestopt'},
+
+{n:'Extensie afgewezen', tijd:'11:15', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:3, swing:null, f50:null, ans:'wait',
+ c:[[95,96.6,94.6,96.4],[96.4,98,96,97.8],[97.8,99.4,97.4,99.2],
+    [99.2,101.4,98.8,99.6],[99.6,100.6,98.4,98.8],[98.8,99.2,97.4,97.8],
+    [97.8,100.2,97.6,99],[99,99.4,97,97.4],
+    [97.4,99.6,97.2,98.4],[98.4,98.8,96.6,97],
+    [97,99,96.8,98.6],[98.6,99.8,97.8,98.2],
+    [98.2,98.6,96.8,97.2]],
+ na:[[97.2,98.8,97,98.4],[98.4,98.8,96.6,97],[97,98.4,96.8,98],[98,98.4,96.4,96.8]],
+ why:'Drie keer komt prijs boven de vorige 1hr high, en drie keer sluit hij er weer onder. De liquiditeit daarboven is dus niet opgehaald en vastgehouden — hij is getest en afgewezen. Een extensie die niet standhoudt is geen extensie; dat niveau doet gewoon zijn werk als weerstand. Poort 2 staat op rood, hoe vaak je die wick ook ziet.',
+ ref:'Wick erboven, close er telkens onder'},
+
+{n:'SL te wijd', tijd:'11:49', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:2, swing:99.6, f50:100.4, tgt:99.4, ans:'wait',
+ c:[[92,94,91.6,93.6],[93.6,97,93.2,96.6],[96.6,101,96.2,100.6],
+    [100.6,106.4,100.2,106],[106,107.2,104.4,104.8],
+    [104.8,105.2,99.6,100],[100,103.4,99.8,103],
+    [103,104.2,102,102.4],[102.4,102.8,99,99.3],
+    [99.3,99.6,96.6,96.9],[96.9,100.8,96.7,100.6]],
+ na:[[100.6,100.9,98.4,98.7],[98.7,99,97.4,97.7],[97.7,99.6,97.5,99.4],[99.4,99.7,97.8,98.1]],
+ why:'Structureel klopt het, maar reken het even door. Je SL hoort boven het lager hoog rond 104,2 en je entry ligt op 100,5 — bijna vier punten risico. Je target, 50% van de beweging sinds de 1hr candle, zit op ongeveer 99,4: nog geen punt onder je entry. Die ene enorme extensie-candle heeft de hele structuur zo ver uit elkaar getrokken dat er niets meer fatsoenlijk te riskeren valt.',
+ ref:'Poort 6 · risico vier keer de opbrengst'},
+
+{n:'Shift al ver gelopen', tijd:'11:52', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:2, swing:98.4, f50:null, ans:'wait',
+ c:[[94,96,93.6,95.6],[95.6,98.4,95.2,98],[98,101.4,97.6,101],
+    [101,103.6,100.6,103.2],[103.2,104.2,102.4,102.8],
+    [102.8,103.2,100.2,100.6],[100.6,101,98.4,98.8],
+    [98.8,100.8,98.6,100.4],[100.4,100.8,97.8,98.2],
+    [98.2,98.4,95.6,95.9],[95.9,96.1,93.4,93.7],
+    [93.7,93.9,91.2,91.5],[91.5,91.7,89,89.3],
+    [89.3,89.5,86.8,87.1],[87.1,88.6,86.9,88.4]],
+ na:[[88.4,88.6,86.2,86.5],[86.5,86.7,84.4,84.7],[84.7,86,84.5,85.8],[85.8,86,83.8,84.1]],
+ why:'De shift was echt — negen candles geleden. Sindsdien is prijs elf punten gevallen zonder jou. Wat je nu ziet is geen 50%-retrace van een verse shift, maar een klein opvegertje in een beweging die zijn werk al gedaan heeft. Je instapmoment lag daarboven; hier meedoen is achter de markt aanlopen met een target die al opgegeten is.',
+ ref:'Je venster voor deze setup is voorbij'},
+
+{n:'Net vóór het venster', tijd:'10:58', bias:'bullish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr low', sep:3, swing:99.6, f50:100, ans:'wait',
+ c:[[107,108,105.4,105.8],[105.8,106.2,103.4,103.8],[103.8,104.2,101,101.4],
+    [101.4,101.8,98.4,98.8],[98.8,99.2,95.8,96.2],[96.2,96.6,94.4,94.8],
+    [94.8,97.6,94.6,97.2],[97.2,99.6,97,99.2],
+    [99.2,99.6,97,97.4],[97.4,97.8,96.2,96.6],
+    [96.6,99,96.4,98.8],[98.8,102.6,98.6,102.2],
+    [102.2,103.8,101.6,102],[102,102.2,99.9,100]],
+ na:[[100,102.4,99.8,102.2],[102.2,104.8,101.8,104.4],[104.4,106.8,104,106.4],[106.4,109,106,108.6]],
+ why:'Twee minuten te vroeg. De setup is compleet en hij loopt ook nog — en het is toch niet jouw trade. Een venster heeft alleen waarde als de randen niet onderhandelbaar zijn, want zodra 10:58 mag, mag 10:52 ook. Vergelijk met die van 11:56: laat binnen het venster is prima, net erbuiten niet.',
+ ref:'Poort 1 · het venster begint om 11:00'},
+
+{n:'Geen echt swingpunt', tijd:'11:33', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:3, swing:null, f50:null, ans:'wait',
+ c:[[93,95.4,92.6,95],[95,97.8,94.6,97.4],[97.4,100.6,97,100.2],
+    [100.2,103,99.8,102.6],[102.6,104.2,102,103.8],[103.8,104.6,102.8,103.2],
+    [103.2,103.6,101.4,101.8],[101.8,102.2,100,100.4],
+    [100.4,100.8,98.6,99],[99,99.4,97.2,97.6],
+    [97.6,98,95.4,95.8],[95.8,96.2,94,94.4],
+    [94.4,96.8,94.2,96.6]],
+ na:[[96.6,97,94.4,94.8],[94.8,96.4,94.6,96.2],[96.2,96.6,94.2,94.6],[94.6,96,94.4,95.8]],
+ why:'Het lijkt op een break, maar kijk naar wat er gebroken zou zijn. Er is nergens een pullback geweest die een swing low heeft neergezet — prijs glijdt in één doorlopende beweging naar beneden en elke candle maakt gewoon de volgende lagere low. Een swingpunt ontstaat pas als prijs er wég beweegt en er later naar terugkeert. Zonder dat is er geen structuur om te breken en plak je het woord BoS op een gewone downtrend.',
+ ref:'Structuur bestaat pas na een terugkeer'},
+
+{n:'Zijwaarts na de shift', tijd:'11:44', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:3, swing:98.2, f50:98.4, ans:'wait',
+ c:[[94,96,93.6,95.6],[95.6,98.4,95.2,98],[98,101.2,97.6,100.8],
+    [100.8,103.4,100.4,103],[103,104,102.2,102.6],
+    [102.6,103,100,100.4],[100.4,100.8,98.2,98.6],
+    [98.6,101,98.4,100.6],[100.6,101.4,99.6,100],
+    [100,100.3,97.6,97.9],[97.9,98.1,95.6,95.9],
+    [95.9,96.6,95.4,96.2],[96.2,96.8,95.6,96],
+    [96,96.7,95.5,96.3],[96.3,96.9,95.7,96.1]],
+ na:[[96.1,96.8,95.4,95.7],[95.7,96.4,95.2,95.9],[95.9,96.5,95.3,95.6],[95.6,96.2,95,95.3]],
+ why:'De shift is er geweest, maar daarna kwam er geen retrace — prijs ging plat liggen onder het niveau. Vier candles zijwaarts is geen pullback, dat is een beweging die zijn energie kwijt is. Zonder retrace naar 50% heb je geen entry, en een markt die na een break stil gaat staan heeft die break vaak al verwerkt.',
+ ref:'Consolidatie is geen retrace'},
+
+{n:'Sweep omhoog, shift omhoog', tijd:'11:21', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:2, swing:104, f50:null, ans:'wait',
+ c:[[95,97,94.6,96.6],[96.6,99,96.2,98.6],[98.6,101.4,98.2,101],
+    [101,103.6,100.6,103.2],[103.2,104,102.4,102.8],
+    [102.8,103.2,101,101.4],[101.4,103,101.2,102.8],
+    [102.8,103.2,101.6,102],[102,102.4,100.8,101.2],
+    [101.2,103.4,101,103.2],[103.2,105.6,103,105.2],
+    [105.2,106.4,104.6,105],[105,105.4,103.4,103.8]],
+ na:[[103.8,106.2,103.6,106],[106,108.4,105.6,108],[108,110.2,107.6,109.8],[109.8,112,109.4,111.6]],
+ why:'Je zag de sweep boven de vorige 1hr high en bent naar een short gaan zoeken. Maar de shift ging omhoog: prijs brak de swing high, niet de swing low. Dat is continuatie, niet jouw omkering. Een sweep vertelt je alleen dát er liquiditeit is opgehaald — de shift bepaalt de richting, en die zegt hier het tegenovergestelde van wat je hoopte.',
+ ref:'Spiegelbeeld van de sweep-omlaag-versie'},
+
+{n:'Valse breakouts aan beide kanten', tijd:'11:29', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:3, swing:null, f50:null, ans:'wait',
+ c:[[97,99.6,96.6,99.2],[99.2,100.8,98.4,98.8],[98.8,99.4,96.2,96.6],
+    [96.6,99,96.4,98.6],[98.6,100.6,98.2,98.8],[98.8,99.2,96,96.4],
+    [96.4,98.8,96.2,98.4],[98.4,100.4,98,98.6],
+    [98.6,99,96.4,96.8],[96.8,99.2,96.6,99],
+    [99,100.7,98.6,98.9],[98.9,99.3,96.2,96.6],
+    [96.6,99.4,96.4,99.2]],
+ na:[[99.2,100.5,98.8,99],[99,99.4,96.6,97],[97,99.6,96.8,99.4],[99.4,100.6,99,99.2]],
+ why:'Beide randen van deze range worden doorgeprikt en beide worden afgewezen. Elke doorbraak is een wick en elke close landt weer binnen. Er is hier geen structuur om tegenaan te handelen — dit is precies de chop waar je journal het over heeft, en de enige juiste actie is je scherm dichtdoen tot het zich oplost.',
+ ref:'Geen enkele close buiten de range'},
+
+{n:'Dood volume bij de break', tijd:'11:38', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:2, swing:98.8, f50:99.7, ans:'wait',
+ vol:[.5,.55,.6,.65,.4,.45,.5,.45,.35,.4,.08,.1,.12,.1,.14,.1],
+ c:[[95,97,94.6,96.6],[96.6,99.2,96.2,98.8],[98.8,101.6,98.4,101.2],
+    [101.2,103.4,100.8,103],[103,104,102.2,102.6],
+    [102.6,103,100.4,100.8],[100.8,101.2,98.8,99.2],
+    [99.2,101.4,99,101],[101,102,100.2,100.6],
+    [100.6,100.9,98.4,98.7],[98.7,98.9,97.4,97.7],
+    [97.7,99.4,97.5,99.2]],
+ na:[[99.2,101.6,99,101.4],[101.4,103.2,101.2,103],[103,104.4,102.6,104],[104,105.6,103.6,105.2]],
+ why:'Aan de vorm mankeert niets — tot je eronder kijkt. De candle die door de swing low breekt print op vrijwel geen volume, en de candles erna zijn net zo dun. Een doorbraak waar niemand aan meedoet is een doorbraak die meteen wordt teruggekocht, en precies dat gebeurde. Je volumeregel geldt niet alleen voor de extensie maar ook voor de shift zelf.',
+ ref:'Volume hoort bij de break, niet alleen bij de extensie'},
+
+{n:'Te vroeg in de hourly candle', tijd:'11:04', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:10, swing:98.6, f50:99.3, ans:'wait',
+ c:[[94,96,93.6,95.6],[95.6,98.4,95.2,98],[98,101.4,97.6,101],
+    [101,103.6,100.6,103.2],[103.2,104.2,102.4,102.8],
+    [102.8,103.2,100.4,100.8],[100.8,101.2,98.6,99],
+    [99,101.4,98.8,101],[101,103,100.4,100.8],
+    [100.8,101.1,98.2,98.5],[98.5,98.7,95.6,95.9],
+    [95.9,97.4,95.7,97.2],[97.2,98.6,97,98.4],
+    [98.4,99.4,98.2,99.3]],
+ na:[[99.3,99.5,96.8,97.1],[97.1,97.3,94.6,94.9],[94.9,95.1,92.6,92.9],[92.9,93.1,90.8,91.1]],
+ why:'De structuur is compleet — kijk nu naar de uurscheiding en de klok. Het is 11:04, dus de huidige 1hr candle is vier minuten oud. Je eigen notitieboek zegt dat je pas na een minuut of twintig gaat kijken en tussen de dertig en vijfenveertig minuten instapt, juist omdat er vóór die tijd nog niets gevormd is om tegen af te meten. Wat je hier leest hoort bij het uur dat net gesloten is.',
+ ref:'Pre-conditie minuten_in_hourly'},
+
+{n:'Sweep-overshoot te groot', tijd:'11:27', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:2, swing:99.8, f50:100.4, tgt:99.7, ans:'wait',
+ c:[[93,95,92.6,94.6],[94.6,97.4,94.2,97],[97,100.4,96.6,100],
+    [100,104.6,99.6,104.2],[104.2,106.8,103.8,106.4],
+    [106.4,107,104.4,104.8],[104.8,105.2,101.6,102],
+    [102,102.4,99.8,100.2],[100.2,102.6,100,102.2],
+    [102.2,104.2,101.4,101.8],[101.8,102.1,99.2,99.5],
+    [99.5,99.7,96.6,96.9],[96.9,100.6,96.7,100.4]],
+ na:[[100.4,100.6,98,98.3],[98.3,98.5,96.4,96.7],[96.7,98.4,96.5,98.2],[98.2,98.5,96.8,97.1]],
+ why:'Je SL hoort achter het extreme van de sweep — dat is precies wat trade 8 je heeft gekost. Hier liep de sweep bijna zeven punten voorbij de vorige 1hr high, dus een stop die dat respecteert staat rond 107 terwijl je entry op 100,4 ligt. Zesenhalve punt risico tegen een target dat nauwelijks onder je entry zit. Een sweep die zo hard doorschiet laat simpelweg geen ruimte om hem fatsoenlijk te traden.',
+ ref:'sl_marge werkt hier niet uit'},
+
+{n:'Wick door het niveau, bullish', tijd:'11:35', bias:'bullish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr low', sep:3, swing:103, f50:null, ans:'wait',
+ c:[[111,112,109.6,110],[110,110.4,107.6,108],[108,108.4,105,105.4],
+    [105.4,105.8,102,102.4],[102.4,102.8,99.4,99.8],[99.8,100.2,97,97.4],
+    [97.4,100.6,97.2,100.2],[100.2,103,100,102.6],
+    [102.6,103,100.8,101.2],[101.2,101.6,99.8,100.2],
+    [100.2,102.4,100,102],[102,102.4,100.6,101],
+    [101,104,100.8,102.2]],
+ na:[[102.2,102.6,100.4,100.8],[100.8,101.2,98.6,99],[99,99.4,97.2,97.6],[97.6,98,95.8,96.2]],
+ why:'Spiegelbeeld van de bearish versie: de wick ging boven de swing high uit, maar de body sloot er weer onder. Verkopers pakten het meteen terug. Dezelfde regel geldt in beide richtingen — geen close voorbij het niveau, geen break. Dat je hier een long zoekt in plaats van een short verandert er niets aan.',
+ ref:'Zelfde regel, andere richting'},
+
+{n:'Soft break, bullish', tijd:'11:42', bias:'bullish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr low', sep:3, swing:101.6, f50:null, ans:'wait',
+ c:[[110,111,108.6,109],[109,109.4,106.6,107],[107,107.4,104.4,104.8],
+    [104.8,105.2,102,102.4],[102.4,102.8,99.6,100],[100,100.4,97.4,97.8],
+    [97.8,98.2,96.4,96.8],[96.8,99.4,96.6,99],
+    [99,101.6,98.8,101.2],[101.2,101.6,99.4,99.8],
+    [99.8,100.2,98.6,99],[99,100.8,98.8,100.6],
+    [100.6,101.5,100.2,101.4],[101.4,101.9,101.2,101.7]],
+ na:[[101.7,101.9,100,100.3],[100.3,100.6,98.4,98.7],[98.7,99,97,97.3],[97.3,97.6,95.6,95.9]],
+ why:'Precies als de bearish soft break: de close ligt een tiende boven het niveau met een body die je nauwelijks ziet. Dat zijn geen kopers die het niveau overnemen, dat is prijs die eroverheen dwaalt. En wat eroverheen dwaalt wordt teruggegeven — kijk maar wat er daarna gebeurt.',
+ ref:'Trade 8 in spiegelbeeld'},
+
+{n:'Bullish shift zonder sweep', tijd:'11:31', bias:'bullish', dxy:'invers', rebal:false, lvl:94, lvlL:'vorige 1hr low', sep:3, swing:101.6, f50:102.8, ans:'wait',
+ c:[[107,108,105.6,106],[106,106.4,103.6,104],[104,104.4,101.4,101.8],
+    [101.8,102.2,99.4,99.8],[99.8,100.2,97.6,98],[98,98.4,96.8,97.2],
+    [97.2,99.8,97,99.4],[99.4,101.6,99.2,101.2],
+    [101.2,101.6,99.2,99.6],[99.6,100,97.6,98],
+    [98,101,97.8,100.8],[100.8,106,100.6,105.6],
+    [105.6,108,105,107.4],[107.4,107.6,102.7,102.8]],
+ na:[[102.8,103,100.4,100.7],[100.7,101,98,98.3],[98.3,98.6,95.6,95.9],[95.9,96.2,93.4,93.7]],
+ why:'Trade 16 in spiegelbeeld. De shift zelf is smetteloos: swing high, hoger laag, forse body-close eroverheen, retrace op 50%. Maar de vorige 1hr low is nooit aangeraakt — de prijs kwam niet eens in de buurt. Die liquiditeit ligt er dus nog, en kijk waar de markt daarna naartoe loopt. Geen vorige candle break blijft geen trade, ook als je long wil.',
+ ref:'crit 2 ✗, de rest ✓'},
+
+{n:'Bearish, ondiepe retrace', tijd:'11:23', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:2, swing:99.2, f50:99.6, ans:'sell',
+ c:[[94,96,93.6,95.6],[95.6,98,95.2,97.6],[97.6,100.6,97.2,100.2],
+    [100.2,102.8,99.8,102.4],[102.4,104,101.8,103.6],[103.6,104.4,102.8,103.2],
+    [103.2,103.6,101,101.4],[101.4,101.8,99.2,99.6],
+    [99.6,102,99.4,101.6],[101.6,103.4,100.8,101.2],
+    [101.2,101.5,98.4,98.7],[98.7,98.9,95.8,96.1],
+    [96.1,99.7,95.9,99.6]],
+ na:[[99.6,99.8,97,97.3],[97.3,97.5,94.6,94.9],[94.9,95.1,92.4,92.7],[92.7,92.9,90.2,90.5]],
+ why:'De retrace raakte 50% en draaide meteen om. Net als bij de bullish variant: 50% is het niveau waarop je entry ligt, geen zone die eerst overtuigend doorbroken moet worden. Een korte reactie erop betekent meestal juist dat de verkopers er weer op zitten. Verder staat alles er — extensie, swing low, lager hoog, harde close.',
+ ref:'Ondiep is niet hetzelfde als onvoldoende'},
+
+{n:'Bullish break neemt twee swings mee', tijd:'11:47', bias:'bullish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr low', sep:3, swing:100, f50:101.4, ans:'buy',
+ c:[[108,109,105.6,106],[106,106.4,103.4,103.8],[103.8,104.2,101,101.4],
+    [101.4,101.8,98.4,98.8],[98.8,99.2,95.8,96.2],[96.2,96.6,94.4,94.8],
+    [94.8,97.6,94.6,97.2],[97.2,99.4,97,99],
+    [99,99.4,97.2,97.6],[97.6,100,97.4,99.8],
+    [99.8,100.2,98,98.4],[98.4,98.8,97.4,97.8],
+    [97.8,104.6,97.6,104.2],[104.2,105.4,103,103.4],
+    [103.4,103.6,101.3,101.4]],
+ na:[[101.4,103.8,101.2,103.6],[103.6,106,103.2,105.6],[105.6,108,105.2,107.6],[107.6,110,107.2,109.6]],
+ why:'Er lagen twee swing highs boven de markt en de break-candle neemt ze allebei in één close mee — bijna zeven punten body. Alles wat daar aan verkooporders lag is in één keer opgeruimd. De retrace komt daarna netjes terug op 50% van die beweging en houdt ruim boven het gebroken niveau.',
+ ref:'Twee niveaus in één candle'},
+
+{n:'Bearish dubbele sweep', tijd:'11:39', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:2, swing:100.8, f50:100.2, ans:'sell',
+ c:[[93,95.4,92.6,95],[95,97.6,94.6,97.2],[97.2,100.4,96.8,100],
+    [100,100.6,98.2,98.6],[98.6,99,96.6,97],[97,99.4,96.8,99],
+    [99,102.6,98.8,102.2],[102.2,105,101.8,104.6],
+    [104.6,105.4,103.2,103.6],[103.6,104,100.8,101.2],
+    [101.2,103.6,101,103.2],[103.2,104,102.2,102.6],
+    [102.6,102.9,100.2,100.5],[100.5,100.7,96.4,96.7],
+    [96.7,100.3,96.5,100.2]],
+ na:[[100.2,100.4,97.6,97.9],[97.9,98.1,95.4,95.7],[95.7,95.9,93.2,93.5],[93.5,93.7,91,91.3]],
+ why:'De eerste poging boven de vorige 1hr high werd meteen teruggekocht — dat was nog niets. De tweede ging vijf punten hoger en dáár keerde het. Daarna het volledige pakket: swing low, lager hoog, een close die er ruim doorheen gaat, retrace op 50%. Een mislukte eerste aanval diskwalificeert de tweede niet.',
+ ref:'Short-variant van de dubbele sweep'},
+
+{n:'Bullish, laat in het venster', tijd:'11:58', bias:'bullish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr low', sep:3, swing:99.6, f50:100.4, ans:'buy',
+ c:[[108,109,106.4,106.8],[106.8,107.2,104.6,105],[105,105.4,102.6,103],
+    [103,103.4,100.4,100.8],[100.8,101.2,97.6,98],[98,98.4,95.4,95.8],
+    [95.8,96.2,94.2,94.6],[94.6,97.4,94.4,97],
+    [97,99.6,96.8,99.2],[99.2,99.6,97,97.4],
+    [97.4,97.8,96,96.4],[96.4,99,96.2,98.8],
+    [98.8,104,98.6,103.6],[103.6,104.8,102.6,103],
+    [103,103.2,100.4,100.5]],
+ na:[[100.5,102.8,100.3,102.6],[102.6,105,102.2,104.6],[104.6,107,104.2,106.6],[106.6,109,106.2,108.6]],
+ why:'Twee minuten voor het einde van je venster en alles staat er. Laat binnen is nog steeds binnen — dezelfde redenering als bij die short van 11:56, alleen andersom. Wat je niet doet is hem oprekken naar 12:02 omdat je er net niet klaar voor was; dan geldt het scenario van 12:37 en is het geen trade meer.',
+ ref:'Binnen blijft binnen, tot de klok slaat'},
+
+{n:'Bearish, sterke body-close', tijd:'11:18', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:2, swing:99.8, f50:99.1, ans:'sell',
+ c:[[94,96,93.6,95.6],[95.6,98.4,95.2,98],[98,101.2,97.6,100.8],
+    [100.8,103.6,100.4,103.2],[103.2,105,102.6,104.6],[104.6,105.2,103.4,103.8],
+    [103.8,104.2,101.6,102],[102,102.4,99.8,100.2],
+    [100.2,102.6,100,102.2],[102.2,103.8,101.4,101.8],
+    [101.8,102.1,100.4,100.7],[100.7,101,94.4,94.7],
+    [94.7,99.2,94.5,99.1]],
+ na:[[99.1,99.3,96.4,96.7],[96.7,96.9,94,94.3],[94.3,94.5,91.6,91.9],[91.9,92.1,89.2,89.5]],
+ why:'Zes punten body in één candle, opent bovenaan en sluit onderaan, dwars door de swing low. Er valt niets aan te interpreteren: verkopers hebben het niveau overgenomen en tot de close vastgehouden. De retrace daarna komt precies op 50% van die beweging en blijft ruim onder het lager hoog.',
+ ref:'Zo ziet conviction eruit'},
+
+{n:'Sweep met alleen een wick', tijd:'11:24', bias:'bearish', dxy:'invers', rebal:false,
+ lvl:100.4, lvlL:'1hr high', sep:2, swing:96.6, f50:97.5, ans:'sell',
+ c:[[94,96,93.6,95.6],[95.6,98.4,95.2,98],[98,100.8,97.6,100.2],
+    [100.2,102.4,99.8,100.2],
+    [100.2,100.6,98.4,98.8],[98.8,99.2,96.6,97],
+    [97,99.6,96.8,99.2],[99.2,100.8,98.6,99],
+    [99,99.3,96.4,96.7],[96.7,97,94.2,94.5],
+    [94.5,97.6,94.3,97.4]],
+ na:[[97.4,97.6,95,95.3],[95.3,95.5,92.8,93.1],[93.1,93.3,90.8,91.1],[91.1,91.3,89,89.3]],
+ why:'Kijk naar de vierde candle: de wick gaat boven de 1hr high uit maar de body sluit '
+    +'er weer onder. Dat is gewoon een geldige sweep — bij de sweep telt de wick, want '
+    +'die wick ís de liquidity grab. Daarna volgt het hele pakket: swing low, lager hoog, '
+    +'lagere low die de lokale structuur wegneemt, en dan een close eronder. Verwar deze '
+    +'regel niet met die van de shift, waar een close wél verplicht is.',
+ ref:'Sweep = wick genoeg · shift = close vereist'},
+
+{n:'MSB zonder derde stap', tijd:'11:36', bias:'bullish', dxy:'invers', rebal:false,
+ lvl:100, lvlL:'1hr low', sep:3, swing:100.6, f50:null, ans:'wait',
+ poort:'Bias, DXY en rebalance staan groen — het gaat mis bij <b>poort 7</b>: dit is een '
+      +'gewone break of structure, geen type-3 shift.',
+ c:[[108,109,106.4,106.8],[106.8,107.2,104,104.4],[104.4,104.8,101,101.4],
+    [101.4,101.8,98.6,99],[99,99.4,96.6,97],
+    [97,99.4,96.8,99.2],[99.2,100.6,98.8,100.2],
+    [100.2,100.6,98.4,98.8],[98.8,101.2,98.6,101],
+    [101,101.4,99.6,100]],
+ na:[[100,100.4,98,98.4],[98.4,98.8,96.4,96.8],[96.8,97.2,94.6,95],[95,95.4,93,93.4]],
+ why:'De sweep is er en er sluit een candle boven het swingpunt — maar de derde stap '
+    +'ontbreekt. Na de sweep-low op 96,6 heeft prijs nooit meer een lágere low gemaakt '
+    +'voordat die break kwam. Precies dat wegnemen van lokale structuur is wat een '
+    +'gewone break of structure tot een type-3 shift maakt. Zonder die stap heb je een '
+    +'BoS, en daar handelt dit model niet op.',
+ ref:'Type 3 = leg · lokale structuur weg · dán de MSB'},
+
+{n:'Eerste pullback al geweest', tijd:'11:34', bias:'bearish', dxy:'invers', rebal:false, lvl:100, lvlL:'vorige 1hr high', sep:6, swing:101.5, f50:101.25, ans:'wait',
+ c:[[92,93.6,91.6,93.4],[93.4,95.4,93.2,95.2],[95.2,97.2,95,97],
+    [97,99,96.8,98.8],[98.8,100.8,98.6,100.6],
+    [100.6,102,100.4,101.8],[101.8,102.4,101.5,102.2],
+    [102.2,104,102,103.8],[103.8,105,103.4,104.6],
+    [104.6,104.8,101.2,101.4],[101.4,101.6,98.6,98.8],
+    [98.8,99,97.5,97.8],[97.8,99.6,97.6,99.4],
+    [99.4,101.4,99.2,101.2],[101.2,101.4,98.4,98.6],
+    [98.6,98.8,96.2,96.5],[96.5,98.4,96.3,98.2]],
+ na:[[98.2,99.4,98,99.2],[99.2,99.4,96.8,97],[97,97.2,95,95.2]],
+ why:'Alles klopte: bias bearish, sweep van de 1hr high, hogere high op 105, en een '
+    +'body-close onder de wick low van de leg. Maar de entry lag vier candles geleden — '
+    +'daar raakte prijs voor het éérst de 50% van de MSB-beweging. Dat is jouw moment '
+    +'geweest. Wat je nu ziet is de twééde pullback: je stop zou op dezelfde 105 moeten, '
+    +'terwijl je target al de helft dichterbij ligt. Zelfde setup, halve RR. Mis je de '
+    +'eerste, dan laat je hem gaan.',
+ ref:'Entry = eerste pullback naar 50%, anders geen trade'}
+];
+
+// ── Fase 2: dezelfde chart, andere context, ander antwoord.
+//    Deze zes zijn klonen van bestaande setups. Aan de 1-minuut mankeert
+//    niets; het is de bias, de DXY of de rebalance die ze afkeurt. Precies
+//    de trades die in fase 1 wél genomen werden.
+function _vind(naam){ return S.find(function(x){ return x.n === naam; }); }
+function _kloon(naam, over){ return Object.assign({}, _vind(naam), over); }
+
+S.push(
+  _kloon('Bearish A-setup', {
+    n:'Perfecte shift, verkeerde bias', tijd:'11:29', bias:'bullish', ans:'wait',
+    poort:'Bias, DXY en rebalance staan alle drie groen — en toch is dit geen trade. '
+         +'Het gaat mis bij <b>poort 7</b>: de shift wijst van je bias vandaan.',
+    why:'Kijk niet naar de chart maar naar de balk erboven. Je 1H-bias is bullish, en '
+       +'deze shift wijst omlaag — dus van je bias vandaan. Dat is geen omkering maar '
+       +'continuatie van de tegenbeweging. Aan de 1-minuut mankeert niets: sweep, swing '
+       +'low, harde close, nette retrace. En precies daarom is dit de gevaarlijkste kaart '
+       +'in het spel, want alles nodigt uit om te verkopen.',
+    ref:'Poort 7 · shift moet terugwijzen naar je bias'}),
+
+  _kloon('Bullish A-setup', {
+    n:'Perfecte shift, verkeerde bias (long)', tijd:'11:43', bias:'bearish', ans:'wait',
+    poort:'De context is in orde — het struikelpunt is <b>poort 7</b>: de shift gaat '
+         +'omhoog terwijl je bias omlaag wijst.',
+    why:'Spiegelbeeld. De 1H-bias is bearish en deze shift gaat omhoog — weg van je bias. '
+       +'De sweep onder de low haalde liquiditeit op, maar de beweging die daarop volgt is '
+       +'een pullback in een dalende markt, geen draai. Je zou de correctie kopen.',
+    ref:'Poort 7 · zelfde regel, andere richting'}),
+
+  _kloon('Scherpe shift', {
+    n:'Bias niet overtuigend', tijd:'11:26', bias:'onduidelijk', ans:'wait',
+    why:'De shift is zo scherp als je hem maar wil hebben — vijf punten body dwars door '
+       +'het swingpunt. Maar je 1H-bias staat op onduidelijk, en daarmee valt de bodem '
+       +'onder de hele setup weg. Zonder richting van boven weet je niet of dit een '
+       +'omkering is of het begin van iets waar je tegenin gaat.',
+    ref:'Poort 2 · geen bias, geen sessie'}),
+
+  _kloon('Bullish A-setup, diepe sweep', {
+    n:'DXY loopt mee', tijd:'11:35', dxy:'unison', ans:'wait',
+    why:'Bias bullish, diepe sweep, keurige shift omhoog, retrace op 50%. Alleen: de '
+       +'dollar loopt ook omhoog. Normaal duwt de een de ander, dus bij eenheid vertelt '
+       +'één van de twee niet de waarheid en weet jij niet welke. De uitzondering voor '
+       +'een echte A+ setup bestaat, maar als je hem hier gebruikt gebruik je hem overal.',
+    ref:'Poort 3 · inverse correlatie ontbreekt'}),
+
+  _kloon('Tweede sweep', {
+    n:'DXY onduidelijk', tijd:'11:52', dxy:'onduidelijk', ans:'wait',
+    why:'De tweede sweep en de shift daarna zijn precies wat je zoekt. Maar de DXY geeft '
+       +'geen duidelijk beeld op de hogere timeframe — hij hangt zijwaarts. Dat is geen '
+       +'bevestiging en dus geen groen licht: "niet tegengesteld" is hier hetzelfde als nee.',
+    ref:'Poort 3 · onduidelijk telt als nee'}),
+
+  _kloon('Alles groen', {
+    n:'Rebalance al geraakt', tijd:'11:47', rebal:true, ans:'wait',
+    why:'Sweep, shift, retrace — allemaal in orde, en de bias klopt ook. Alleen is het '
+       +'midpoint waar je naartoe zou handelen al opgehaald. Je target ligt achter je, '
+       +'dus je stapt in richting een niveau dat de markt al heeft afgewerkt. Er valt '
+       +'niets meer op te halen.',
+    ref:'Poort 4 · de onbalans is al weg'})
+);
+
+var POOL=S;
+function shuffle(a){
+  for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}
+  return a;
+}
+function deal(){
+  return shuffle(POOL.slice()).slice(0,10);
+}
+S=deal();
+
+/* ═══════════ chart ═══════════ */
+var W=440,H=274,PL=8,PR=54,PT=14,PB=18,VH=26,VG=8;
+var gold=function(p){ return 4390+(p-100)*3; };
+
+var host=document.getElementById('chart');
+var st={i:0,score:0,res:[],wrong:[],drill:false,tool:null,pend:null,draws:[],locked:false,geo:null};
+
+function build(s,shown){
+  var all=s.c.concat(s.na), v=[];
+  all.forEach(function(k){v.push(k[1],k[2]);}); v.push(s.lvl);
+  if(s.tgt!=null) v.push(s.tgt);
+  var lo=Math.min.apply(null,v), hi=Math.max.apply(null,v), pd=(hi-lo)*.12;
+  lo-=pd; hi+=pd;
+  var n=all.length, pw=W-PL-PR, ph=H-PT-PB-VH-VG, RE=PL+pw;
+  var Y=function(p){return PT+(hi-p)/(hi-lo)*ph;};
+  var P=function(y){return hi-(y-PT)/ph*(hi-lo);};
+  var stp=pw/n, X=function(i){return PL+stp*(i+.5);};
+  var bw=Math.min(stp*.62,9);
+  st.geo={Y:Y,P:P,X:X,PL:PL,RE:RE,PT:PT,ph:ph,lo:lo,hi:hi};
+
+  var o=[];
+  /* gridlijnen + prijsas */
+  var ticks=5;
+  for(var t=0;t<=ticks;t++){
+    var p=lo+(hi-lo)*t/ticks, y=Y(p);
+    o.push('<line x1="'+PL+'" y1="'+y.toFixed(1)+'" x2="'+RE+'" y2="'+y.toFixed(1)+'" stroke="var(--tv-grid)" stroke-width="1"/>');
+    o.push('<text x="'+(RE+5)+'" y="'+(y+3.2).toFixed(1)+'" class="cl" fill="var(--tv-axis)" font-size="8.5">'+gold(p).toFixed(1)+'</text>');
+  }
+  /* uur-separator */
+  if(s.sep!=null){
+    var sx=X(s.sep)-stp/2;
+    o.push('<line x1="'+sx.toFixed(1)+'" y1="'+PT+'" x2="'+sx.toFixed(1)+'" y2="'+(PT+ph)+'" stroke="var(--tv-sep)" stroke-width="1" stroke-dasharray="2 3" opacity=".55"/>');
+  }
+  /* vorige 1hr niveau */
+  o.push('<line x1="'+PL+'" y1="'+Y(s.lvl).toFixed(1)+'" x2="'+RE+'" y2="'+Y(s.lvl).toFixed(1)+'" stroke="var(--tv-level)" stroke-width="1.1" stroke-dasharray="5 4"/>');
+  var lblY=Y(s.lvl)-5, lblW=s.lvlL.length*4.9+6;
+
+  o.push('<g id="reveal"></g><g id="udraw"></g>');
+
+  /* candles */
+  for(var i=0;i<n;i++){
+    var k=all[i], up=k[3]>=k[0], col=up?'var(--tv-up)':'var(--tv-down)';
+    var bt=Y(Math.max(k[0],k[3])), bb=Y(Math.min(k[0],k[3]));
+    var vis=(i<shown)?1:0;
+    o.push('<g class="cd" data-i="'+i+'" style="opacity:'+vis+'">'+
+      '<line x1="'+X(i).toFixed(1)+'" y1="'+Y(k[1]).toFixed(1)+'" x2="'+X(i).toFixed(1)+'" y2="'+Y(k[2]).toFixed(1)+'" stroke="'+col+'" stroke-width="1.1"/>'+
+      '<rect x="'+(X(i)-bw/2).toFixed(1)+'" y="'+bt.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(bb-bt,1.2).toFixed(1)+'" fill="'+col+'"/></g>');
+  }
+  /* volume delta — afgeleid van de body, tenzij het scenario iets anders voorschrijft */
+  var vz=PT+ph+VG+VH/2, mx=0, mag=[];
+  for(var q=0;q<n;q++){ var m=(s.vol&&s.vol[q]!=null)?s.vol[q]:Math.abs(all[q][3]-all[q][0]); mag.push(m); if(m>mx) mx=m; }
+  if(mx<=0) mx=1;
+  o.push('<line x1="'+PL+'" y1="'+vz+'" x2="'+RE+'" y2="'+vz+'" stroke="var(--tv-grid)" stroke-width="1"/>');
+  for(var q2=0;q2<n;q2++){
+    var upv=all[q2][3]>=all[q2][0], h2=Math.max(mag[q2]/mx*(VH/2-1),1);
+    var vis2=(q2<shown)?1:0;
+    o.push('<rect class="vb" data-i="'+q2+'" style="opacity:'+vis2+'" x="'+(X(q2)-bw/2).toFixed(1)+
+      '" y="'+(upv?vz-h2:vz).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h2.toFixed(1)+
+      '" fill="'+(upv?'var(--tv-fib)':'var(--tv-sep)')+'" opacity="'+(vis2?'.85':'0')+'"/>');
+  }
+  o.push('<rect x="'+(PL+1)+'" y="'+(lblY-7.5).toFixed(1)+'" width="'+lblW.toFixed(1)+'" height="10" fill="var(--tv-bg)"/>'+
+         '<text x="'+(PL+4)+'" y="'+lblY.toFixed(1)+'" class="cl" fill="var(--tv-level)" font-size="8.5">'+s.lvlL+'</text>');
+  o.push('<rect id="hit" x="'+PL+'" y="'+PT+'" width="'+pw+'" height="'+ph+'" fill="transparent" style="cursor:crosshair"/>');
+
+  host.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Oefenchart, scenario '+(st.i+1)+'">'+o.join('')+'</svg>';
+  host.querySelectorAll('text').forEach(function(t){t.setAttribute('font-family',"'JetBrains Mono',ui-monospace,monospace");});
+  host.querySelector('#hit').addEventListener('pointerdown',tap);
+}
+
+/* ═══════════ tekenen ═══════════ */
+function tap(e){
+  if(!st.tool||st.tool==='wis') return;
+  var svg=host.querySelector('svg'), r=svg.getBoundingClientRect();
+  var y=(e.clientY-r.top)/r.height*H;
+  var p=st.geo.P(y);
+  if(p>st.geo.hi||p<st.geo.lo) return;
+
+  if(st.tool==='bos'||st.tool==='ext'){
+    st.draws.push({k:st.tool,p:p});
+    hint('geplaatst — tik nog een niveau of kies een ander gereedschap');
+  }else{
+    if(st.pend==null){ st.pend=p; hint('tweede punt aantikken'); return; }
+    st.draws.push({k:st.tool,a:st.pend,b:p}); st.pend=null; hint(null);
+  }
+  paintDraws();
+}
+function paintDraws(){
+  var g=host.querySelector('#udraw'); if(!g) return;
+  var G=st.geo, o=[];
+  st.draws.forEach(function(d){
+    if(d.k==='bos'||d.k==='ext'){
+      var lab=d.k==='bos'?'BOS':'EXT';
+      o.push('<line x1="'+G.PL+'" y1="'+G.Y(d.p).toFixed(1)+'" x2="'+G.RE+'" y2="'+G.Y(d.p).toFixed(1)+'" stroke="var(--tv-draw)" stroke-width="1.2" stroke-dasharray="4 3"/>'+
+             '<text x="'+(G.RE-2)+'" y="'+(G.Y(d.p)-4).toFixed(1)+'" text-anchor="end" font-family="\'JetBrains Mono\',monospace" fill="var(--tv-draw)" font-size="8.5" font-weight="700">'+lab+'</text>');
+    }else{
+      var y1=G.Y(Math.max(d.a,d.b)), y2=G.Y(Math.min(d.a,d.b)), mid=(y1+y2)/2;
+      var lab2=d.k==='fibbos'?'0.5 BOS':'0.5';
+      o.push('<rect x="'+G.PL+'" y="'+y1.toFixed(1)+'" width="'+(G.RE-G.PL)+'" height="'+(y2-y1).toFixed(1)+'" fill="var(--tv-draw)" opacity=".06"/>'+
+             '<line x1="'+G.PL+'" y1="'+mid.toFixed(1)+'" x2="'+G.RE+'" y2="'+mid.toFixed(1)+'" stroke="var(--tv-fib)" stroke-width="1.1" stroke-dasharray="2 3"/>'+
+             '<text x="'+(G.RE-2)+'" y="'+(mid-4).toFixed(1)+'" text-anchor="end" font-family="\'JetBrains Mono\',monospace" fill="var(--tv-fib)" font-size="8.5" font-weight="700">'+lab2+'</text>');
+    }
+  });
+  g.innerHTML=o.join('');
+}
+function hint(txt){
+  var el=document.getElementById('hint'); if(el) el.textContent=txt||'';
+}
+
+/* ═══════════ ronde ═══════════ */
+function load(){
+  var s=S[st.i];
+  st.tool=null; st.pend=null; st.draws=[]; st.locked=false;
+  document.getElementById('num').textContent=('0'+(st.i+1)).slice(-2);
+  document.getElementById('titel').textContent='Wat doe je hier?';
+  document.getElementById('klok').textContent=s.tijd||'';
+  toonContext(s);
+  document.getElementById('fbhost').innerHTML='';
+  document.querySelectorAll('.tool').forEach(function(b){b.classList.remove('on');});
+  document.querySelectorAll('.act').forEach(function(b){b.disabled=false;});
+  hint(null); pips();
+  build(s,0);
+  var i=0, cds=host.querySelectorAll('.cd'), vbs=host.querySelectorAll('.vb');
+  (function step(){
+    if(i>=s.c.length) return;
+    cds[i].style.opacity=1; if(vbs[i]) vbs[i].style.opacity=.85; i++;
+    setTimeout(step,95);
+  })();
+}
+function toonContext(s){
+  var bias = s.bias || 'bullish', dxy = s.dxy || 'invers';
+  var rij = function(k, v, kl){
+    return '<div class="ctx-r"><span class="ctx-k">'+k+'</span>'+
+           '<span class="ctx-v '+kl+'">'+v+'</span></div>';
+  };
+  var bk = bias==='bullish' ? 'bull' : bias==='bearish' ? 'bear' : 'warn';
+  var dk = dxy==='invers' ? 'ok' : dxy==='unison' ? 'no' : 'warn';
+  var dv = dxy==='invers' ? 'invers ✓' : dxy==='unison' ? 'loopt mee' : 'onduidelijk';
+  document.getElementById('ctx').innerHTML =
+      rij('1H-bias', bias.toUpperCase(), bk)
+    + rij('DXY', dv, dk)
+    + rij('rebalance', s.rebal ? 'al geraakt' : 'nog open', s.rebal ? 'no' : 'ok');
+}
+
+function poortOordeel(s){
+  if (s.poort) return s.poort;
+  if ((s.bias||'') === 'onduidelijk')
+    return 'Hier stopt het al bij <b>poort 2</b>: zonder overtuigende 1H-bias doet de rest van de chart er niet toe.';
+  if ((s.dxy||'invers') !== 'invers')
+    return 'Hier stopt het bij <b>poort 3</b>: de DXY bevestigt je bias niet op de hogere timeframe.';
+  if (s.rebal)
+    return 'Hier stopt het bij <b>poort 4</b>: de rebalance is al geweest, dus je target ligt achter je.';
+  return 'Bias, DXY en rebalance stonden alle drie groen — dit ging dus over de chart zelf.';
+}
+
+function pips(){
+  var b=document.getElementById('bar'), o='';
+  for(var i=0;i<S.length;i++){
+    var c=st.res[i]==null?(i===st.i?'pip now':'pip'):(st.res[i]?'pip ok':'pip no');
+    o+='<div class="'+c+'"></div>';
+  }
+  b.innerHTML=o;
+  document.getElementById('score').innerHTML='<b>'+st.score+'</b> / '+st.res.filter(function(x){return x!=null;}).length;
+}
+
+function answer(a){
+  if(st.locked) return; st.locked=true;
+  var s=S[st.i], ok=(a===s.ans);
+  st.res[st.i]=ok; if(ok){ st.score++; } else { st.wrong.push(s); }
+  document.querySelectorAll('.act').forEach(function(b){b.disabled=true;});
+  pips();
+
+  /* onthul de rest + de juiste markeringen */
+  var cds=host.querySelectorAll('.cd'), vbs=host.querySelectorAll('.vb'), j=s.c.length;
+  (function step(){
+    if(j>=cds.length){ marks(s); return; }
+    cds[j].style.opacity=1; if(vbs[j]) vbs[j].style.opacity=.85; j++;
+    setTimeout(step,120);
+  })();
+
+  var NL={buy:'BUY',sell:'SELL',wait:'WAIT OUT'};
+  document.getElementById('fbhost').innerHTML=
+    '<div class="fb '+(ok?'ok':'no')+'">'+
+      '<div class="fb-h"><span class="fb-v">'+(ok?'Goed':'Fout')+'</span>'+
+      '<span class="fb-a mono">jij: '+NL[a]+(ok?'':' · juist: '+NL[s.ans])+'</span></div>'+
+      '<div class="fb-poort">'+poortOordeel(s)+'</div>'+
+      '<p>'+s.why+'</p><span class="ref mono">'+s.ref+'</span></div>'+
+    '<button class="next" id="next">'+(st.i===S.length-1?'Bekijk je score':'Volgende chart')+'</button>';
+  document.getElementById('next').addEventListener('click',function(){
+    st.i++; if(st.i>=S.length) finish(); else load();
+  });
+}
+function marks(s){
+  var g=host.querySelector('#reveal'); if(!g) return;
+  var G=st.geo, o=[];
+  if(s.swing!=null){
+    o.push('<line x1="'+G.PL+'" y1="'+G.Y(s.swing).toFixed(1)+'" x2="'+G.RE+'" y2="'+G.Y(s.swing).toFixed(1)+'" stroke="var(--tv-draw)" stroke-width="1.3" stroke-dasharray="4 3"/>'+
+           '<text x="'+(G.RE-4)+'" y="'+(G.Y(s.swing)+11).toFixed(1)+'" text-anchor="end" font-family="\'JetBrains Mono\',monospace" fill="var(--tv-draw)" font-size="8.5" font-weight="700">swingpunt</text>');
+  }
+  if(s.tgt!=null){
+    o.push('<line x1="'+G.PL+'" y1="'+G.Y(s.tgt).toFixed(1)+'" x2="'+G.RE+'" y2="'+G.Y(s.tgt).toFixed(1)+'" stroke="var(--tv-fib)" stroke-width="1.4"/>'+
+           '<text x="'+(G.RE-2)+'" y="'+(G.Y(s.tgt)+10).toFixed(1)+'" text-anchor="end" font-family="\'JetBrains Mono\',monospace" fill="var(--tv-fib)" font-size="8.5" font-weight="700">target</text>');
+  }
+  if(s.f50!=null){
+    o.push('<line x1="'+G.PL+'" y1="'+G.Y(s.f50).toFixed(1)+'" x2="'+G.RE+'" y2="'+G.Y(s.f50).toFixed(1)+'" stroke="var(--tv-fib)" stroke-width="1.2" stroke-dasharray="2 3"/>'+
+           '<text x="'+(G.RE-4)+'" y="'+(G.Y(s.f50)-5).toFixed(1)+'" text-anchor="end" font-family="\'JetBrains Mono\',monospace" fill="var(--tv-fib)" font-size="8.5" font-weight="700">0.5 entry</text>');
+  }
+  g.innerHTML=o.join('');
+}
+
+function finish(){
+  document.getElementById('game').hidden=true;
+  var e=document.getElementById('einde'); e.hidden=false;
+  var n=S.length, sc=st.score;
+  var handel=[],wacht=[];
+  S.forEach(function(s,i){ (s.ans==='wait'?wacht:handel).push(st.res[i]); });
+  var hOk=handel.filter(Boolean).length, wOk=wacht.filter(Boolean).length;
+
+  var kop = sc>=9?'Scherp.' : sc>=7?'Goede basis.' : sc>=5?'Het begint te komen.' : 'Nog even oefenen.';
+  var tekst = sc>=9
+    ? 'Je leest zowel de setups als de valkuilen. Dit is het niveau waarop de check je nauwelijks meer hoeft te redden.'
+    : sc>=7
+    ? 'De structuur zie je grotendeels. Loop bij de missers na welke poort je oversloeg — meestal is het poort 2 of poort 4.'
+    : 'Neem de guide er nog eens bij, met name de anatomie en de sectie over wat géén shift is. Speel daarna opnieuw.';
+
+  var extra='';
+  if(handel.length && wacht.length && wOk===wacht.length && hOk<handel.length){
+    extra='<div class="note"><b>Let op:</b> je hebt elke geen-trade goed, maar mist de setups die je wél had moeten nemen. Discipline zit goed, herkenning nog niet — en te vaak wachten kost op de lange termijn net zo goed geld.</div>';
+  }else if(handel.length && wacht.length && hOk===handel.length && wOk<wacht.length){
+    extra='<div class="note"><b>Let op:</b> je herkent de goede setups, maar drukt te vaak op handelen bij charts die geen trade zijn. Dat is precies het patroon dat je deze week −26,11 kostte.</div>';
+  }else if(sc>=9){
+    extra='<div class="note"><b>Volgende stap:</b> de winst zit nu niet meer in herkennen, maar in doen wat je herkent — ook na een verlies.</div>';
+  }
+  var dash=function(a,b){ return b? a+'/'+b : '—'; };
+
+  var mis=st.wrong.slice();
+  var slot='<p style="font-size:12.5px;color:var(--text-3);margin:14px 0 0">'+
+    (st.drill
+      ? 'Herhaalronde van je missers.'
+      : 'Deze ronde bevatte '+handel.length+' setups om te nemen en '+wacht.length+' keer wachten — willekeurig getrokken uit negenenvijftig scenario\'s.')+'</p>';
+  var drillBtn = mis.length
+    ? '<button class="next drill" style="margin-top:16px" id="drill">Alleen je missers opnieuw ('+mis.length+')</button>'
+    : '';
+  e.innerHTML='<div class="done"><h2>'+kop+'</h2>'+
+    '<div class="big mono">'+sc+'/'+n+'</div>'+
+    '<p>'+tekst+'</p>'+
+    '<div class="grid">'+
+      '<div class="cell"><div class="k">Setups herkend</div><div class="v mono">'+dash(hOk,handel.length)+'</div></div>'+
+      '<div class="cell"><div class="k">Terecht gewacht</div><div class="v mono">'+dash(wOk,wacht.length)+'</div></div>'+
+    '</div>'+extra+
+    slot+drillBtn+'<button class="next" style="margin-top:'+(mis.length?'8px':'16px')+'" id="again">Nieuwe ronde</button></div>';
+  var d=document.getElementById('drill');
+  if(d) d.addEventListener('click',function(){
+    S=shuffle(mis);
+    st={i:0,score:0,res:[],wrong:[],drill:true,tool:null,pend:null,draws:[],locked:false,geo:null};
+    e.hidden=true; document.getElementById('game').hidden=false; load();
+  });
+  document.getElementById('again').addEventListener('click',function(){
+    st={i:0,score:0,res:[],wrong:[],drill:false,tool:null,pend:null,draws:[],locked:false,geo:null};
+    S=deal(); e.hidden=true; document.getElementById('game').hidden=false; load();
+  });
+}
+
+/* ═══════════ knoppen ═══════════ */
+document.getElementById('tools').addEventListener('click',function(e){
+  var b=e.target.closest('.tool'); if(!b) return;
+  var t=b.dataset.t;
+  if(t==='wis'){ st.draws=[]; st.pend=null; st.tool=null; hint(null); paintDraws();
+    document.querySelectorAll('.tool').forEach(function(x){x.classList.remove('on');}); return; }
+  var on=b.classList.contains('on');
+  document.querySelectorAll('.tool').forEach(function(x){x.classList.remove('on');});
+  st.pend=null; hint(null);
+  if(on){ st.tool=null; } else { b.classList.add('on'); st.tool=t;
+    hint(t==='bos'||t==='ext'?'tik een niveau aan':'tik twee punten aan'); }
+});
+document.querySelectorAll('.act').forEach(function(b){
+  b.addEventListener('click',function(){ answer(b.dataset.a); });
+});
+
+load();
+})();
+</script>
+
+</body>
+</html>

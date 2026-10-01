@@ -1,0 +1,136 @@
+/* ══════════════════════════════════════════════════════════════════════
+   CBR Journal — kleurthema
+   Overgenomen uit de Type 3 Shift guide.
+
+   Het idee in één regel: de PAGINA is warm en rustig en volgt het thema
+   van het systeem, maar CHARTPANELEN blijven in beide thema's donker.
+   Daardoor blijft het trading-gevoel behouden zonder dat de hele app
+   de hele dag donker en druk staat.
+
+   Gebruik: importeer dit als eerste stylesheet, of plak het bovenaan
+   de bestaande CSS. Verwijs daarna overal naar var(--…) in plaats van
+   naar losse hex-waarden.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── Fonts ─────────────────────────────────────────────────────────────
+   Outfit doet het rustige, Ken Mono de precisie bij cijfers.
+   Zet alle bedragen, points, RR en tijden in --font-mono met
+   font-variant-numeric: tabular-nums, dan lijnen kolommen netjes uit. */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root{
+  --font-ui:   'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+
+  /* ── Vlakken ── */
+  --bg:        #f7f4ef;   /* paginagrond, warm gebroken wit          */
+  --surface:   #ffffff;   /* kaarten, panelen, formulieren           */
+  --surface-2: #efebe3;   /* subtiel verhoogd: rijen, chips, stappen */
+  --border:    #ddd7cd;   /* zichtbare rand                          */
+  --border-2:  #e8e3da;   /* scheidingslijn binnen een kaart         */
+
+  /* ── Tekst ── */
+  --text:      #181c25;   /* koppen en primaire tekst                */
+  --text-2:    #4a5263;   /* lopende tekst, labels                   */
+  --text-3:    #868f9f;   /* bijschriften, metadata, placeholders    */
+
+  /* ── Signaal ── */
+  --bull:      #0d9668;   /* winst, ja, grade A                      */
+  --bear:      #dc2f4e;   /* verlies, nee, grade C                   */
+  --shift:     #6d4dea;   /* accent: de shift, actieve staat, focus  */
+  --entry:     #b07d05;   /* entry, waarschuwing, grade B            */
+
+  /* ── Zachte tinten van dezelfde signalen ── */
+  --bull-bg:   rgba(13,150,104,.055);
+  --bear-bg:   rgba(220,47,78,.055);
+  --shift-bg:  rgba(109,77,234,.06);
+  --entry-bg:  rgba(176,125,5,.09);
+
+  /* ── Chartpanelen: bewust NIET thema-afhankelijk ──────────────────────
+     Deze blijven in light én dark identiek. Chart.js-datasets en inline
+     SVG halen hun kleur hiervandaan, niet uit de signaaltokens hierboven,
+     omdat die op een donkere ondergrond te dof uitvallen.              */
+  --c-bg:        #10141c;  /* achtergrond van het chartpaneel   */
+  --c-grid:      #1d2735;  /* assen en gridlijnen               */
+  --c-mute:      #7b8798;  /* aslabels, niveaus, bijschriften   */
+  --c-bull:      #22d3a5;
+  --c-bear:      #ff5a75;
+  --c-shift:     #a78bfa;
+  --c-entry:     #fbbf24;
+
+  /* ── Vorm ── */
+  --r:    11px;   /* kaarten en panelen  */
+  --r-sm: 7px;    /* chips, knoppen, rijen */
+}
+
+/* ── Donker thema ─────────────────────────────────────────────────────
+   Volgt de systeeminstelling, tenzij er expliciet data-theme="light"
+   op <html> staat. De chart-tokens hierboven blijven ongemoeid.       */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:        #0b0e13;
+    --surface:   #141822;
+    --surface-2: #1a1f2a;
+    --border:    #1f2531;
+    --border-2:  #1a1f2a;
+
+    --text:      #e3e6ed;
+    --text-2:    #98a2b5;
+    --text-3:    #606a7c;
+
+    --bull:      #16c095;
+    --bear:      #ff5570;
+    --shift:     #a78bfa;
+    --entry:     #eab308;
+
+    --bull-bg:   rgba(22,192,149,.07);
+    --bear-bg:   rgba(255,85,112,.07);
+    --shift-bg:  rgba(167,139,250,.08);
+    --entry-bg:  rgba(234,179,8,.1);
+  }
+}
+
+/* Handmatige schakelaar, wint in beide richtingen. */
+:root[data-theme="dark"]{
+  --bg:#0b0e13; --surface:#141822; --surface-2:#1a1f2a;
+  --border:#1f2531; --border-2:#1a1f2a;
+  --text:#e3e6ed; --text-2:#98a2b5; --text-3:#606a7c;
+  --bull:#16c095; --bear:#ff5570; --shift:#a78bfa; --entry:#eab308;
+  --bull-bg:rgba(22,192,149,.07); --bear-bg:rgba(255,85,112,.07);
+  --shift-bg:rgba(167,139,250,.08); --entry-bg:rgba(234,179,8,.1);
+}
+
+/* ── Basis ────────────────────────────────────────────────────────────
+   Veilig om meteen aan te zetten; raakt geen componentklassen aan.    */
+body{
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  line-height: 1.6;
+}
+h1,h2,h3{ letter-spacing:-.015em; text-wrap:balance; }
+a{ color: var(--shift); }
+:focus-visible{ outline:2px solid var(--shift); outline-offset:2px; }
+
+/* Cijfers lijnen alleen netjes uit als ze mono én tabular zijn. */
+.num,.bedrag,.points,.rr,td.num{
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Chart.js ─────────────────────────────────────────────────────────
+   Chart.js leest geen CSS-variabelen. Haal ze bij het opstarten één
+   keer op en geef ze door aan de config:
+
+   const T = getComputedStyle(document.documentElement);
+   const c = n => T.getPropertyValue(n).trim();
+
+   Chart.defaults.color            = c('--c-mute');
+   Chart.defaults.borderColor      = c('--c-grid');
+   Chart.defaults.font.family      = c('--font-mono');
+   // saldo/equity-lijn:            c('--c-bull')
+   // verliesreeks of drawdown:     c('--c-bear')
+   // shift- of setup-markeringen:  c('--c-shift')
+
+   Herhaal die uitlezing wanneer het thema wisselt, anders houdt de
+   chart de kleuren van het vorige thema vast.                        */

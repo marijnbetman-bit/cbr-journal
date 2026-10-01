@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trade toevoegen — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+
+  <div class="container smal">
+    <div class="nw-kop">
+      <h2 id="nwTitel">Trade toevoegen</h2>
+      <div class="grade big" id="nwGrade">C</div>
+    </div>
+    <p class="sub" id="nwGradeTekst">Klik de vijf regels aan; de grade volgt vanzelf.</p>
+
+    <!-- 1. Wanneer -->
+    <div class="panel nw-blok">
+      <div class="nw-stap">1 · Wanneer</div>
+      <div class="rij">
+        <label class="field"><span class="lbl">Datum</span>
+          <input type="date" id="nwDatum" /></label>
+        <label class="field"><span class="lbl">Tijd (optioneel)</span>
+          <input type="time" id="nwTijd" /></label>
+        <div class="field"><span class="lbl">Richting</span>
+          <div class="dir-toggle" id="nwRichting">
+            <button type="button" data-v="long">▲ Long</button>
+            <button type="button" data-v="short">▼ Short</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. De regels -->
+    <div class="panel nw-blok">
+      <div class="nw-stap">2 · Heb ik me aan de regels gehouden?</div>
+      <p class="hint">De eerste drie zijn kritisch: staat daar één ✗ of ? bij, dan was het geen trade.</p>
+      <div id="nwRegels"></div>
+    </div>
+
+    <!-- 3. Uitkomst -->
+    <div class="panel nw-blok">
+      <div class="nw-stap">3 · Uitkomst</div>
+      <div class="rij">
+        <label class="field"><span class="lbl">Resultaat (€)</span>
+          <input type="number" step="0.01" id="nwResultaat" placeholder="4.28" inputmode="decimal" />
+          <span class="hint">Winst positief, verlies met een minteken.</span></label>
+        <label class="field"><span class="lbl">Kosten (€)</span>
+          <input type="number" step="0.01" id="nwKosten" value="-0.06" /></label>
+        <label class="field"><span class="lbl">RR</span>
+          <input type="number" step="0.01" id="nwRR" placeholder="1.8" inputmode="decimal" /></label>
+        <label class="field"><span class="lbl">Risk (€, optioneel)</span>
+          <input type="number" step="0.01" id="nwRisk" placeholder="2.00" inputmode="decimal" /></label>
+      </div>
+      <div class="nw-netto" id="nwNetto"></div>
+    </div>
+
+    <!-- 4. Screenshot -->
+    <div class="panel nw-blok">
+      <div class="nw-stap">4 · Screenshot</div>
+      <div class="dropzone" id="nwDrop">
+        <div class="dz-ic">🖼</div>
+        <div>Sleep je chart hierheen</div>
+        <div class="hint">Meerdere mag. Ze komen in <code>screenshots/&lt;datum&gt;/</code>.</div>
+      </div>
+      <div class="nw-shots" id="nwShots"></div>
+    </div>
+
+    <!-- 5. Omschrijving -->
+    <div class="panel nw-blok">
+      <div class="nw-stap">5 · Wat gebeurde er?</div>
+      <label class="field"><span class="lbl">Omschrijving (één of twee zinnen)</span>
+        <textarea id="nwLes" rows="3"
+          placeholder="Overextensie omlaag uit de 1H range, 3-step break op 1M, TP geraakt."></textarea></label>
+      <label class="field"><span class="lbl">Tags (optioneel)</span>
+        <input type="text" id="nwTags" placeholder="bv. sweep van high" /></label>
+    </div>
+
+    <div class="nw-acties">
+      <button class="btn btn-primary groot" id="nwSave">Trade opslaan</button>
+      <a class="btn" id="uitgebreid" href="/trade">Uitgebreid formulier ⋯</a>
+      <a class="btn" href="/">Annuleren</a>
+      <span class="hint" id="nwHint"></span>
+    </div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/nieuw.js"></script>
+</body>
+</html>

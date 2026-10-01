@@ -1,0 +1,12 @@
+{
+  "db_pad": "cbr_journal.db",
+  "ontvanger": "marijn.betman@gmail.com",
+  "smtp": {
+    "host": "smtp.gmail.com",
+    "poort": 465,
+    "gebruiker": "marijn.betman@gmail.com",
+    "wachtwoord": "GMAIL-APP-WACHTWOORD-HIER",
+    "afzender": "marijn.betman@gmail.com"
+  },
+  "api": { "gebruik": true, "model": "claude-sonnet-5" }
+}

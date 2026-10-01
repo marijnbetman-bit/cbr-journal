@@ -1,0 +1,7 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+anthropic>=0.40   # alleen nodig voor het foto-logboek; zonder API-sleutel vul je de niveaus met de hand in
+MetaTrader5>=5.0.5000   # MT5-koppeling: leest je trades (alleen Windows)
+fpdf2>=2.7   # PDF-rapport (kerncijfers op 1 pagina)
+truststore>=0.9   # Telegram via de Windows-certificaten (VPS met HTTPS-inspectie)

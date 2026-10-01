@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="topbar">
+    <span class="mono" style="color:var(--muted);font-size:13px;">
+      <span class="blink-dot">●</span> terminal
+    </span>
+    <div class="spacer"></div>
+    <div class="period-tabs" id="periodTabs">
+      <button data-p="all" class="on">Alles</button>
+      <button data-p="week">Deze week</button>
+      <button data-p="month">Deze maand</button>
+      <button data-p="regel" title="Alleen trades sinds je laatste regelwijziging">Sinds regelwijziging</button>
+    </div>
+    <div class="period-tabs" id="bronTabs" title="Backtests tellen mee voor je edge-analyse, niet voor je euro's">
+      <button data-b="live" class="on">Live</button>
+      <button data-b="backtest">Backtest</button>
+      <button data-b="alles">Alles</button>
+    </div>
+  </div>
+
+  <div class="lagen-balk">
+    <nav class="lagen" id="lagen">
+      <button data-l="vandaag" class="on"><span class="li">◉</span> Vandaag</button>
+      <button data-l="edge"><span class="li">◈</span> Edge</button>
+      <button data-l="discipline"><span class="li">🛡</span> Discipline</button>
+      <button data-l="patronen"><span class="li">◍</span> Patronen</button>
+    </nav>
+  </div>
+
+  <div class="container">
+    <!-- ============ LAAG: VANDAAG ============ -->
+    <div class="laag" data-laag="vandaag">
+    <!-- MT account-bar -->
+    <div class="mt-bar" id="mtBar"></div>
+
+    <!-- Startkapitaal -->
+    <div class="inst-rij">
+      <span class="inst-lbl">Portfolio-startkapitaal:</span>
+      <input type="number" step="0.01" id="startkapitaal" style="width:140px" />
+      <span class="mono" style="color:var(--muted)">€</span>
+      <button class="btn" id="saveKapitaal">Bijwerken</button>
+      <span class="scheiding"></span>
+      <span class="inst-lbl">Dagregels: max</span>
+      <input type="number" min="0" step="1" id="maxTrades" style="width:64px" />
+      <span class="inst-lbl">trades/dag, stoppen na</span>
+      <input type="number" min="0" step="1" id="stopNa" style="width:64px" />
+      <span class="inst-lbl">verliezers</span>
+      <button class="btn" id="saveRegels">Bijwerken</button>
+    </div>
+
+    <div class="section-title">Proces boven uitkomst</div>
+    <div id="procesBord"></div>
+
+    <!-- Balans-check + databeheer -->
+    <div id="balansCheck"></div>
+    <div id="bronNote"></div>
+    <div id="regelNote"></div>
+    <div id="dubbels"></div>
+    <div class="data-bar" id="dataBar"></div>
+
+    <!-- Reward-paneel -->
+    <div class="reward">
+      <h2>Wat ging goed</h2>
+      <p class="sub">Discipline en goede setups verdienen aandacht — niet alleen de winst.</p>
+      <div class="milestone" id="milestone"></div>
+      <div class="streaks" id="streaks"></div>
+      <div class="reward-grid" id="rewardGrid"></div>
+      <div class="badges" id="badges"></div>
+    </div>
+
+    <div class="section-title">Verloop</div>
+<div class="chart-grid">
+<div class="chart-panel full">
+        <h3>Portfolio-groei</h3>
+        <p class="hint">Blauw = je échte portfolio vanaf je startkapitaal. Groen = wat het zou zijn als je
+          <b>alleen valide setups (A/B)</b> had genomen. Het gat tussen beide lijnen is wat discipline je oplevert.</p>
+        <div class="chart-wrap tall"><canvas id="cEquity"></canvas></div>
+        <p class="hint" id="equityNote" style="margin:10px 0 2px;border-top:1px solid var(--border);padding-top:10px;"></p>
+      </div>
+<div class="chart-panel">
+        <h3>Netto per dag</h3>
+        <p class="hint">Groene en rode dagen in één oogopslag.</p>
+        <div class="chart-wrap"><canvas id="cPerDag"></canvas></div>
+      </div>
+<div class="chart-panel">
+        <h3>Resultaat per trade</h3>
+        <p class="hint">Netto per trade (incl. charges). Groen = winst, rood = verlies.</p>
+        <div class="chart-wrap"><canvas id="cPerTrade"></canvas></div>
+      </div>
+</div>
+
+    <div class="section-title">Trade-historie</div>
+    <div class="mt-table-wrap">
+      <table class="mt" id="histTable">
+        <thead>
+          <tr>
+            <th>Datum</th><th>Tijd</th><th>Instrument</th><th>Richting</th><th>Grade</th>
+            <th>RR</th><th>Resultaat</th><th>Netto</th><th>Fouten</th>
+          </tr>
+        </thead>
+        <tbody id="histBody"></tbody>
+      </table>
+    </div>
+    </div><!-- /laag vandaag -->
+
+    <!-- ============ LAAG: DISCIPLINE ============ -->
+    <div class="laag" data-laag="discipline" hidden>
+    <!-- Fase 11: volg ik mijn eigen regels? -->
+    <div class="section-title">Volg ik mijn eigen regels?</div>
+    <div class="adh-grid">
+      <div class="chart-panel">
+        <h3>Regel-adherentie</h3>
+        <p class="hint">Het percentage trades waarbij je je eigen regels volgde: checklist valide,
+          RR minstens 1, en geen discipline-fout in het foutenblok.</p>
+        <div id="adhScore"></div>
+        <div id="adhBanden"></div>
+        <div id="adhRedenen"></div>
+      </div>
+      <div class="chart-panel">
+        <h3>Regels gevolgd vs. gebroken</h3>
+        <p class="hint">Dit is het cijfer waar het om gaat. Als links duidelijk beter presteert dan
+          rechts, is discipline geen moraal maar rendement.</p>
+        <div id="adhVergelijk"></div>
+      </div>
+      <div class="chart-panel">
+        <h3>Binnen of buiten je uur</h3>
+        <p class="hint" id="vensterHint2">Je edge is gemeten in één uur. Wat je daarbuiten doet
+          is een ander spel met dezelfde inzet.</p>
+        <div id="vensterBlok"></div>
+      </div>
+      <div class="chart-panel">
+        <h3>Hoe je erin stond</h3>
+        <p class="hint">Uit je eigen dagkaarten: doet je staat vooraf er financieel toe?</p>
+        <div id="sessieBlok"></div>
+      </div>
+      <div class="chart-panel full">
+        <h3>Gemiste setups</h3>
+        <p class="hint">Een C laten lopen is discipline. Een A of B laten lopen uit twijfel is een fout —
+          en meestal een dure.</p>
+        <div id="gemist"></div>
+      </div>
+    </div>
+
+    <div class="section-title">Discipline over tijd</div>
+<div class="chart-grid">
+<div class="chart-panel full">
+        <h3>Discipline-meter</h3>
+        <p class="hint">Een score per handelsdag, afgeleid uit wat er al in de journal staat: geforceerde
+          C-setups, trades boven je dagmaximum, doorgaan na je stoploss-regel, psychologie-fouten.
+          Bewust overgeslagen setups leveren punten óp. Het gat tussen "discipline zakt" en "curve zakt"
+          is meestal een paar dagen.</p>
+        <div id="discTrend"></div>
+        <div class="chart-wrap"><canvas id="cDiscipline"></canvas></div>
+      </div>
+<div class="chart-panel">
+        <h3>Winrate: valide setups vs. C</h3>
+        <p class="hint">Het doel: de valide (A/B) balk moet omhoog. C = "geen trade".</p>
+        <div class="chart-wrap"><canvas id="cWinrate"></canvas></div>
+      </div>
+<div class="chart-panel">
+        <h3>Grade-verdeling</h3>
+        <p class="hint">Hoeveel A (perfect), B (valide) en C (geen trade).</p>
+        <div class="chart-wrap"><canvas id="cGrades"></canvas></div>
+      </div>
+</div>
+    </div><!-- /laag discipline -->
+
+    <!-- ============ LAAG: EDGE ============ -->
+    <div class="laag" data-laag="edge" hidden>
+
+    <!-- Ronde 2: waar stond mijn stop t.o.v. de sweep? -->
+    <div class="section-title">Waar stond mijn stop?</div>
+    <div id="sweepDekking"></div>
+    <div class="edge-grid">
+      <div class="chart-panel">
+        <h3>Hoe ver kwam de sweep?</h3>
+        <p class="hint">Verdeling van de overshoot voorbij de vorige 1H high/low, in points
+          (1 point = 0,10 in prijs). De lijn is je SL-afstand: alles rechts daarvan
+          nam je stop mee.</p>
+        <div id="overshootHist"></div>
+      </div>
+      <div class="chart-panel">
+        <h3>Wat als mijn SL anders had gestaan?</h3>
+        <p class="hint">Schuif de SL-afstand en zie wat er met je eigen trades zou zijn gebeurd.
+          Overleven volgt uit de meting; een verliezer telt alleen als winnaar wanneer je
+          hebt gelogd dat prijs daarna alsnog TP haalde.</p>
+        <div id="slSimulator"></div>
+      </div>
+    </div>
+    <div id="binnenSweep"></div>
+
+    <!-- Edge: werkt het model? -->
+    <div class="section-title">Heb ik een edge?</div>
+    <div id="betrouwbaar"></div>
+    <div class="edge-bar" id="edgeBar"></div>
+    <div class="edge-grid">
+      <div class="chart-panel">
+        <h3>Welk criterium levert je geld op</h3>
+        <p class="hint">Expectancy als het criterium ✓ was, tegenover als het dat niet was.
+          Een groot positief verschil betekent: deze regel betaalt.</p>
+        <div class="mt-table-wrap">
+          <table class="mt" id="critTable">
+            <thead>
+              <tr>
+                <th style="text-align:left">Criterium</th>
+                <th>Met ✓</th><th>Winrate</th><th>Exp. R</th>
+                <th>Zonder</th><th>Winrate</th><th>Exp. R</th><th>Verschil</th>
+              </tr>
+            </thead>
+            <tbody id="critBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="chart-panel">
+        <h3>SL-nabijheid en TP-verloop</h3>
+        <p class="hint">De lichte versie van MAE/MFE — twee klikken per trade, en je weet of je stop te krap staat.</p>
+        <div id="maemfe"></div>
+      </div>
+    </div>
+
+    <div class="section-title">Hoe zeker is zeker?</div>
+<div class="edge-grid">
+      <div class="chart-panel">
+        <h3>Hoe zeker is je winrate?</h3>
+        <p class="hint">Een winrate uit weinig trades is geen meting maar een schatting.
+          Het Wilson-interval laat zien hoe breed die schatting is.</p>
+        <div id="wilson"></div>
+      </div>
+      <div class="chart-panel">
+        <h3>Monte-Carlo: hoeveel hiervan is toeval?</h3>
+        <p class="hint">10.000 keer je eigen trades opnieuw trekken, in willekeurige volgorde.
+          Hoe breder de waaier, hoe minder je huidige curve betekent.</p>
+        <div id="monte"></div>
+      </div>
+    </div>
+<div class="chart-grid">
+<div class="chart-panel">
+        <h3>Equity in R</h3>
+        <p class="hint">Winst uitgedrukt in risk-multiples: +RR bij winst, −1 bij verlies.</p>
+        <div class="chart-wrap"><canvas id="cR"></canvas></div>
+      </div>
+<div class="chart-panel">
+        <h3>Kosten (charges) cumulatief</h3>
+        <p class="hint">Wat je kwijt bent aan charges — €0,06 per trade telt op.</p>
+        <div class="chart-wrap"><canvas id="cKosten"></canvas></div>
+      </div>
+</div>
+    </div><!-- /laag edge -->
+
+    <!-- ============ LAAG: PATRONEN ============ -->
+    <div class="laag" data-laag="patronen" hidden>
+
+    <div class="section-title">Kwaliteit naast de checklist</div>
+    <div class="chart-grid">
+      <div class="chart-panel">
+        <h3>Duidelijke tegenover softe shifts</h3>
+        <p class="hint" id="shiftTooltip">Een type-3 shift is niet binair.</p>
+        <div id="shiftKwaliteit"></div>
+      </div>
+      <div class="chart-panel">
+        <h3>Volume en overextensie</h3>
+        <p class="hint">Hoog volume hoort bij een goede overextensie; laag volume dat steeds
+          terugcorrigeert bij een slechte. Hier staat of dat bij jou ook zo uitpakt.</p>
+        <div id="volumeKwaliteit"></div>
+      </div>
+      <div class="chart-panel">
+        <h3>Minuten in de hourly candle</h3>
+        <p class="hint">Je regel: entries pas zoeken na ~20 minuten, entry rond 30–45.</p>
+        <div id="inHourly"></div>
+      </div>
+    </div>
+
+    <div class="section-title">Wanneer ben ik goed?</div>
+    
+
+    
+
+<div class="chart-grid">
+<div class="chart-panel">
+        <h3>Welk kwartier van het uur betaalt</h3>
+        <p class="hint">Je handelt één uur per dag. Je eigen regel zegt: zoek entries pas na
+          ongeveer twintig minuten in de hourly candle. Hier staat of dat klopt.</p>
+        <div class="chart-wrap"><canvas id="cKwartier"></canvas></div>
+        <div id="kwartierTabel"></div>
+      </div>
+<div class="chart-panel">
+        <h3>Weekdag</h3>
+        <p class="hint">Expectancy per dag van de week. Onder de tien trades per dag zegt dit nog niets.</p>
+        <div class="chart-wrap"><canvas id="cWeekdag"></canvas></div>
+      </div>
+<div class="chart-panel">
+        <h3>Is je onderbuik gekalibreerd?</h3>
+        <p class="hint">Je zekerheid 1–5 bij de entry, afgezet tegen wat die trades opleverden.</p>
+        <div class="chart-wrap"><canvas id="cZekerheid"></canvas></div>
+        <div id="kalOordeel"></div>
+      </div>
+<div class="chart-panel">
+        <h3>Emotie tegenover resultaat</h3>
+        <p class="hint">Welke mentale staat kost je geld. Uit de chips die je bij elke trade aanklikt.</p>
+        <div class="chart-wrap"><canvas id="cEmotie"></canvas></div>
+      </div>
+<div class="chart-panel">
+        <h3>Per tag</h3>
+        <p class="hint">Je eigen labels, elk met eigen expectancy. Zo trek je varianten binnen het
+          CBR-model uit elkaar zonder dat er code bij hoeft.</p>
+        <div id="tagPaneel"></div>
+      </div>
+<div class="chart-panel">
+        <h3>Foutfrequentie</h3>
+        <p class="hint">Welke foutcodes het vaakst terugkomen — hier zit je winst.</p>
+        <div class="chart-wrap"><canvas id="cFouten"></canvas></div>
+      </div>
+<div class="chart-panel">
+        <h3>Criterium-kwaliteit (✓ / ? / ✗)</h3>
+        <p class="hint">Welk criterium chronisch een ? of ✗ krijgt — daar ligt je werk.</p>
+        <div class="chart-wrap"><canvas id="cCrits"></canvas></div>
+      </div>
+</div>
+    </div><!-- /laag patronen -->
+  </div>
+
+  <script src="/static/vendor/chart.umd.min.js"></script>
+  <script src="/static/common.js"></script>
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>

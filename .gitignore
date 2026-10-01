@@ -1,0 +1,18 @@
+# data en geheimen: nooit in git
+*.db
+*.db-*
+*.db.*
+journal_config.json
+journal_bot_state.json
+*.log
+*.zip
+*.bak*
+*.backup*
+__pycache__/
+screenshots/
+backups/
+logs/
+signalen-import/
+Claude outputs/
+_backup-*/
+*.pdf

@@ -1,0 +1,14 @@
+VPS-UPDATE-4 - donker thema (+ alles uit UPDATE-3)
+===================================================
+Bevat: het nieuwe donkere thema (zwart/blauw/groen/wit, zoals je TradingView)
+en ook de signaal-oordeel-update (UPDATE-3). Heb je UPDATE-3 nog niet
+geinstalleerd? Dan hoef je die niet meer apart te doen, dit zip bevat alles.
+
+Installeren op de VPS (zelfde als vorige keer):
+1. Zet dit zip op de VPS en pak uit OVER de journal-map heen
+   (C:\Users\Administrator\Pictures\CBR Journal\journal\journal), 'Alles vervangen'.
+2. Sluit het START-JOURNAL-venster en dubbelklik START-JOURNAL.bat opnieuw.
+3. Ververs de pagina in je browser/telefoon (Ctrl+F5 / pagina herladen).
+
+Er staat geen database, config of screenshot in dit zip: je data blijft zoals hij is.
+Terug naar het lichte thema? Verwijder static\donker.css en herstart.

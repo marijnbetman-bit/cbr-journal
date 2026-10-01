@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dagoverzicht — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="topbar">
+    <input type="date" id="datePicker" />
+    <div class="spacer"></div>
+    <a class="btn" href="/guide" title="Twijfel je over een setup? Begin bij De check.">📐 Guide</a>
+    <a class="btn" href="/trainer" title="50 oefencharts: buy, sell of wait out">🎯 Trainer</a>
+    <a class="btn" id="snelLoggen" href="/snel">Snel</a>
+    <a class="btn" id="planTrade" href="#">Plan</a>
+    <a class="btn" id="addNoTrade" href="#">+ No-trade</a>
+    <a class="btn btn-primary" id="addTrade" href="#">+ Trade</a>
+    <a class="btn btn-ghost" id="addTradeVol" href="#" title="Uitgebreid formulier met foutcodes, zekerheid en MAE/MFE">⋯</a>
+  </div>
+
+  <div class="container">
+    <div id="weekFocus"></div>
+    <div id="dagregels"></div>
+    <div id="voorbereiding"></div>
+    <div id="sessieKaart"></div>
+    <div class="summary" id="summary"></div>
+
+    <div class="section-title" id="planTitle" style="display:none">Gepland — nog te beslissen</div>
+    <div class="cards" id="planCards"></div>
+
+    <div class="section-title" id="tradesTitle">Trades</div>
+    <div class="cards" id="tradeCards"></div>
+
+    <div class="section-title" id="skipTitle" style="display:none">Bewust overgeslagen</div>
+    <div class="cards" id="skipCards"></div>
+
+    <div class="section-title" id="noTradesTitle">No-trades</div>
+    <div class="cards" id="noTradeCards"></div>
+
+    <div class="section-title">Dag afsluiten</div>
+    <div class="panel dagreview">
+      <p class="sub" style="margin-bottom:14px">Twee zinnen aan het eind van je handelsdag. Dat is genoeg.</p>
+      <div id="reviewGevuld"></div>
+      <div class="rij">
+        <label class="field"><span class="lbl">Wat ging goed</span>
+          <textarea id="dagGoed" rows="2"></textarea></label>
+        <label class="field"><span class="lbl">Wat kon beter</span>
+          <textarea id="dagBeter" rows="2"></textarea></label>
+      </div>
+      <label class="field"><span class="lbl">Waar let ik morgen op</span>
+        <input type="text" id="dagFocus" style="width:100%" /></label>
+      <button class="btn btn-primary" id="saveDag">Dag afsluiten</button>
+    </div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/overview.js"></script>
+</body>
+</html>

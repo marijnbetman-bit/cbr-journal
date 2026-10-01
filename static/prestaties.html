@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prestaties — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+
+  <div class="topbar">
+    <div class="period-tabs" id="periodTabs">
+      <button data-p="alles" class="on">Alles</button>
+      <button data-p="maand">Deze maand</button>
+      <button data-p="week">Deze week</button>
+      <button data-p="regel">Sinds regelwijziging</button>
+    </div>
+    <div class="spacer"></div>
+    <div class="period-tabs" id="bronTabs">
+      <button data-b="live" class="on">Live</button>
+      <button data-b="backtest">Backtest</button>
+      <button data-b="alles">Alles</button>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- Kern: wat staat er onder de streep -->
+    <div class="section-title">Hoe sta ik ervoor</div>
+    <div id="kernBar"></div>
+    <div id="aandeelNoot"></div>
+
+    <!-- Saldo en percentage -->
+    <div class="chart-panel">
+      <h3>Saldoverloop</h3>
+      <p class="hint">Je saldo per trade, vanaf je startkapitaal. De procentuele stijging
+        rekent over je startkapitaal — nooit over het eindsaldo.</p>
+      <div class="chart-wrap"><canvas id="cEquity"></canvas></div>
+    </div>
+
+    <!-- Per maand -->
+    <div class="section-title">Per maand</div>
+    <div class="chart-grid">
+      <div class="chart-panel">
+        <h3>Resultaat per maand</h3>
+        <p class="hint">In euro's, met het maandrendement over het saldo waarmee die maand begon.</p>
+        <div class="chart-wrap"><canvas id="cMaand"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <h3>Maanden op een rij</h3>
+        <p class="hint">Maandpercentages tel je niet op maar stapel je: twee maanden van
+          +10% is +21%, niet +20%.</p>
+        <div id="maandTabel"></div>
+      </div>
+    </div>
+
+    <!-- Per dag -->
+    <div class="section-title">Per dag</div>
+    <div class="chart-grid">
+      <div class="chart-panel">
+        <h3>Resultaat per handelsdag</h3>
+        <div class="chart-wrap"><canvas id="cDag"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <h3>Dagen op een rij</h3>
+        <p class="hint">Elk dagpercentage rekent over het saldo waarmee die dag begon.</p>
+        <div id="dagTabel"></div>
+      </div>
+    </div>
+
+    <!-- De klok -->
+    <div class="section-title">De klok</div>
+    <div class="chart-grid">
+      <div class="chart-panel">
+        <h3>Per uur van de dag</h3>
+        <p class="hint">Je handelt het 2e uur van Londen. Dit is vooral een check of dat
+          klopt met waar je geld vandaan komt.</p>
+        <div class="chart-wrap"><canvas id="cUur"></canvas></div>
+        <div id="uurTabel"></div>
+      </div>
+      <div class="chart-panel">
+        <h3>Waar in het uur open je?</h3>
+        <p class="hint">Je eigen regel: entries pas zoeken na ~20 minuten, entry rond 30–45.
+          Hier staat of dat je ook geld oplevert.</p>
+        <div class="chart-wrap"><canvas id="cMoment"></canvas></div>
+        <div id="momentOordeel"></div>
+      </div>
+    </div>
+
+    <div class="chart-panel">
+      <h3>Per vijf minuten in het uur</h3>
+      <p class="hint">Fijnmaziger beeld van hetzelfde. Rood = vóór minuut 20, dat is tegen je eigen regel.</p>
+      <div class="chart-wrap"><canvas id="cVijf"></canvas></div>
+    </div>
+
+    <!-- Uitsplitsingen -->
+    <div class="section-title">Waar komt het vandaan</div>
+    <div class="chart-grid">
+      <div class="chart-panel"><h3>Per weekdag</h3><div id="weekdagTabel"></div></div>
+      <div class="chart-panel"><h3>Long tegenover short</h3><div id="richtingTabel"></div></div>
+      <div class="chart-panel"><h3>Per grade</h3>
+        <p class="hint">De vraag die telt: verdien je aan je A- en B-setups, en kosten je C's je geld?</p>
+        <div id="gradeTabel"></div></div>
+    </div>
+
+    <!-- Reeksen en uitschieters -->
+    <div class="section-title">Reeksen en uitschieters</div>
+    <div id="reeksBar"></div>
+    <div class="chart-grid">
+      <div class="chart-panel"><h3>Uitschieters</h3><div id="uitschietersTabel"></div></div>
+      <div class="chart-panel"><h3>Winst tegenover verlies</h3>
+        <p class="hint">Payoff = gemiddelde winst gedeeld door gemiddeld verlies. Met een
+          winrate-first model mag die onder 1 liggen, zolang je winrate dat draagt.</p>
+        <div id="payoffTabel"></div></div>
+    </div>
+
+  </div>
+
+  <script src="/static/vendor/chart.umd.min.js"></script>
+  <script src="/static/common.js"></script>
+  <script src="/static/prestaties.js"></script>
+</body>
+</html>

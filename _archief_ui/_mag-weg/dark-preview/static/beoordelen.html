@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="nl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Beoordelen</title>
+<style>
+:root{--bg:#f7f4ef;--panel:#fff;--rand:#ddd7cd;--tekst:#1c1c1c;--zacht:#6b6b6b;
+  --accent:#6d4dea;--groen:#1a9d5a;--rood:#d23c36;--leeg:#efebe3;--wacht:#b26a00}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16151a;--panel:#1f1e25;
+  --rand:#34323b;--tekst:#ece9e4;--zacht:#a39e96;--accent:#9d86f5;--groen:#3cc47d;--rood:#f0625c;
+  --leeg:#2a2830;--wacht:#e0a040}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tekst);padding:12px 16px 60px;
+  font:15px/1.45 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:620px;margin:0 auto}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.top a{color:var(--accent);text-decoration:none;font-size:14px}
+h1{font-size:22px;margin:10px 0 4px}
+h2{font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--zacht);margin:26px 0 8px}
+.status{font-size:13px;color:var(--zacht);display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.stip{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--zacht);margin-right:5px}
+.stip.aan{background:var(--groen)}.stip.fout{background:var(--rood)}
+button.klein{font:inherit;font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid var(--rand);
+  background:var(--panel);color:var(--tekst);cursor:pointer}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.melding{background:var(--panel);border:1px solid var(--rand);border-left:3px solid var(--wacht);
+  border-radius:8px;padding:10px 12px;font-size:14px;margin-top:10px}
+.kaart{background:var(--panel);border:1px solid var(--rand);border-radius:14px;padding:14px;margin-bottom:12px}
+.kaart.klaar{opacity:.92}
+.kop{display:grid;grid-template-columns:auto 1fr;gap:0 12px;align-items:center}
+.grade{grid-row:span 2;width:44px;height:44px;border-radius:10px;display:grid;place-items:center;
+  font-weight:700;font-size:20px;color:#fff;background:#9b948a}
+.gA{background:var(--groen)}.gB{background:var(--accent)}
+.bedrag{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.pos{color:var(--groen)}.neg{color:var(--rood)}
+.meta{font-size:13px;color:var(--zacht)}
+.chart{display:block;width:100%;height:auto;border-radius:8px;border:1px solid var(--rand);margin:12px 0 4px;background:#fff}
+.blok{margin-top:12px}
+.bloktitel{font-size:12px;color:var(--zacht);text-transform:uppercase;letter-spacing:.05em;margin:4px 0}
+.rij{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;
+  border-top:1px solid var(--rand)}
+.rij:first-of-type{border-top:none}
+.rij .lbl{font-size:15px}.rij .lbl small{display:block;font-size:11px;color:var(--zacht)}
+.seg{display:flex;flex:none;border:1px solid var(--rand);border-radius:9px;overflow:hidden}
+.seg button{font:inherit;font-size:14px;min-width:56px;padding:9px 10px;border:none;background:var(--panel);
+  color:var(--tekst);cursor:pointer}
+.seg button+button{border-left:1px solid var(--rand)}
+.seg button.ja.aan{background:var(--groen);color:#fff}
+.seg button.nee.aan{background:var(--rood);color:#fff}
+.uitkomst{margin-top:10px;font-size:14px;padding:8px 10px;border-radius:8px;background:var(--leeg)}
+.uitkomst b{font-size:15px}
+textarea{width:100%;font:inherit;font-size:15px;padding:9px;border:1px solid var(--rand);border-radius:8px;
+  background:var(--panel);color:var(--tekst);min-height:62px;margin-top:10px}
+.notities{font-size:13px;color:var(--zacht);white-space:pre-wrap;margin-top:8px}
+.leeg{color:var(--zacht);font-size:14px;padding:14px;border:1px dashed var(--rand);border-radius:12px;text-align:center}
+details summary{cursor:pointer;color:var(--accent);font-size:14px;list-style:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
+<body><div class="wrap">
+<div class="top"><a href="/">← Journal</a><button class="klein" id="nuKijken">Nu kijken in MT5</button></div>
+<h1>Beoordelen</h1>
+<div class="status" id="status">status laden…</div>
+<div id="melding"></div>
+<h2 id="kopOpen">Wacht op jou</h2>
+<div id="open"></div>
+<h2>Vandaag al beoordeeld</h2>
+<div id="vandaag"></div>
+</div>
+<script>
+let CHECKS=[], CRITERIA=[];
+const $=s=>document.querySelector(s);
+const geld=v=>v==null?"–":(v<0?"−€":"+€")+Math.abs(v).toFixed(2).replace(".",",");
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function rij(t,k,lbl,isCheck){
+  const v = isCheck ? t.checks[k] : t.criteria[k];
+  const ja = isCheck ? v===1 : v==="yes", nee = isCheck ? v===0 : v==="no";
+  const auto = (k==="check_venster"||k==="check_dagmax") ? '<small>automatisch ingevuld</small>' : '';
+  return `<div class="rij"><span class="lbl">${esc(lbl)}${auto}</span>
+    <span class="seg" role="group" aria-label="${esc(lbl)}">
+      <button type="button" class="ja${ja?' aan':''}" aria-pressed="${ja}" data-t="${t.id}" data-k="${k}" data-w="1">ja</button>
+      <button type="button" class="nee${nee?' aan':''}" aria-pressed="${nee}" data-t="${t.id}" data-k="${k}" data-w="0">nee</button>
+    </span></div>`;
+}
+
+function uitkomst(t){
+  if(t.beoordeeld===1){
+    const s = t.schoon===1 ? "schone trade ✓" : "niet schoon";
+    return `<div class="uitkomst"><b>Grade ${esc(t.grade)}</b> · ${s}</div>`;
+  }
+  const open = Object.values(t.checks).filter(v=>v==null).length +
+               ["f2_bias","f2_dxy","f2_expansie","f2_sweep","f2_shift"].filter(k=>!["yes","no"].includes(t.criteria[k])).length;
+  return `<div class="uitkomst">Nog ${open} te tikken · nu grade <b>${esc(t.grade)}</b></div>`;
+}
+
+function kaart(t){
+  const netto = t.resultaat==null?null:(t.resultaat+(t.charges||0));
+  const r = t.r==null?"":` · ${(t.r>=0?"+":"")+t.r.toFixed(2).replace(".",",")}R`;
+  const meta=[(t.richting||"").toUpperCase(), `${t.datum.slice(8)}-${t.datum.slice(5,7)} ${t.tijd||""}${t.tijd_exit?"–"+t.tijd_exit:""}`,
+    t.exit_reden||"", t.rr!=null?"RR "+t.rr.toFixed(1).replace(".",","):"", t.sl_points!=null?"SL "+Math.round(t.sl_points)+" pts":""]
+    .filter(Boolean).join(" · ");
+  return `<article class="kaart${t.beoordeeld===1?' klaar':''}" id="k${t.id}">
+    <div class="kop"><span class="grade g${esc(t.grade)}">${esc(t.grade)}</span>
+      <span class="bedrag ${netto>=0?'pos':'neg'}">${geld(t.resultaat)}<span class="meta"> netto ${geld(netto)}${r}</span></span>
+      <span class="meta">${esc(meta)} · #${t.id}</span></div>
+    ${t.chart?`<a href="${t.chart}" target="_blank" rel="noopener"><img class="chart" src="${t.chart}" alt="chart van trade ${t.id}" loading="lazy"></a>`:""}
+    <div class="blok"><div class="bloktitel">Discipline</div>${CHECKS.map(([k,l])=>rij(t,k,l,true)).join("")}</div>
+    <div class="blok"><div class="bloktitel">De setup (bepaalt je grade)</div>${CRITERIA.map(([k,l])=>rij(t,k,l,false)).join("")}</div>
+    ${uitkomst(t)}
+    <textarea id="n${t.id}" placeholder="Notitie of les (optioneel)"></textarea>
+    <button class="klein" data-notitie="${t.id}">Notitie toevoegen</button>
+    ${t.notities?`<details><summary>notities</summary><div class="notities">${esc(t.notities)}</div></details>`:""}
+  </article>`;
+}
+
+async function laad(){
+  const d = await (await fetch("/api/beoordelen")).json();
+  CHECKS=d.checks; CRITERIA=d.criteria;
+  $("#kopOpen").textContent = `Wacht op jou (${d.open.length})`;
+  $("#open").innerHTML = d.open.length ? d.open.map(kaart).join("")
+    : '<div class="leeg">Alles is beoordeeld. Nieuwe trades uit MetaTrader verschijnen hier vanzelf.</div>';
+  $("#vandaag").innerHTML = d.vandaag.length ? d.vandaag.map(t=>`<details><summary>${esc(t.tijd||"")} ${esc((t.richting||"").toUpperCase())} ${geld(t.resultaat)} · grade ${esc(t.grade)}</summary>${kaart(t)}</details>`).join("")
+    : '<div class="leeg">Nog niets vandaag.</div>';
+}
+
+async function status(){
+  try{
+    const s = await (await fetch("/api/mt5/status")).json();
+    const tg = s.telegram||{};
+    const mt = s.verbonden ? `<span><span class="stip aan"></span>MT5 verbonden${s.server?" ("+esc(s.server)+")":""}</span>`
+      : `<span><span class="stip ${s.aan===false?'':'fout'}"></span>MT5 niet verbonden</span>`;
+    const tijd = s.laatste_ronde ? `<span>laatst gekeken ${s.laatste_ronde.slice(11,16)}</span>` : "";
+    const bot = tg.actief ? `<span><span class="stip aan"></span>Telegram ${esc(tg.bot||"")}</span>`
+      : `<span><span class="stip"></span>Telegram-bot uit</span>`;
+    $("#status").innerHTML = mt + tijd + bot;
+    const m = [];
+    if(!s.verbonden && s.melding) m.push(esc(s.melding));
+    if(!tg.actief && tg.melding && !String(tg.melding).startsWith("niet ingesteld")) m.push(esc(tg.melding));
+    $("#melding").innerHTML = m.map(x=>`<div class="melding">${x}</div>`).join("");
+  }catch(e){ $("#status").textContent="status onbekend"; }
+}
+
+document.addEventListener("click", async e=>{
+  const b = e.target.closest("button[data-k]");
+  if(b){
+    const r = await fetch(`/api/beoordeel/${b.dataset.t}`,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({sleutel:b.dataset.k, waarde:b.dataset.w})});
+    if(r.ok){ const t = await r.json(); document.querySelectorAll("#k"+t.id).forEach(el=>el.outerHTML = kaart(t)); }
+    return;
+  }
+  const n = e.target.closest("button[data-notitie]");
+  if(n){
+    const id=n.dataset.notitie, veld=document.getElementById("n"+id);
+    if(!veld.value.trim()) return;
+    const r = await fetch(`/api/beoordeel/${id}`,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({notitie:veld.value})});
+    if(r.ok){ const t=await r.json(); document.querySelectorAll("#k"+t.id).forEach(el=>el.outerHTML = kaart(t)); }
+  }
+});
+$("#nuKijken").onclick = async ()=>{
+  $("#nuKijken").textContent="kijkt…";
+  await fetch("/api/mt5/sync-nu",{method:"POST"}).catch(()=>{});
+  setTimeout(async()=>{ await laad(); await status(); $("#nuKijken").textContent="Nu kijken in MT5"; }, 4000);
+};
+laad(); status(); setInterval(status, 30000); setInterval(()=>{ if(!document.querySelector("textarea:focus")) laad(); }, 60000);
+</script>
+</body></html>

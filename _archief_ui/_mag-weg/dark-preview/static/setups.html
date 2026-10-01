@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Setup-bibliotheek — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="topbar">
+    <span class="mono" style="color:var(--muted);font-size:13px;">
+      <span class="blink-dot">●</span> bibliotheek
+    </span>
+    <div class="period-tabs" id="gradeTabs">
+      <button data-g="A" class="on">Alleen A</button>
+      <button data-g="AB">A en B</button>
+    </div>
+    <div class="spacer"></div>
+  </div>
+
+  <div class="container">
+    <p class="sub" style="max-width:72ch">
+      Je eigen valide setups naast elkaar. Blader hier vijf minuten doorheen vóór de sessie —
+      je oog kalibreren op je eigen goede trades werkt beter dan welke tabel dan ook.
+    </p>
+    <div id="bibKop"></div>
+    <div id="bibLijst"></div>
+  </div>
+
+  <div class="lightbox" id="lightbox" hidden>
+    <button class="lb-sluit" id="lbSluit" aria-label="Sluiten">✕</button>
+    <img id="lbImg" alt="" />
+    <div class="lb-bij" id="lbBij"></div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/setups.js"></script>
+</body>
+</html>

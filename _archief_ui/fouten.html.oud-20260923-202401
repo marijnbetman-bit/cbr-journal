@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Foutenanalyse — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="topbar">
+    <span style="color:var(--muted);font-size:13px;">foutenanalyse</span>
+    <div class="spacer"></div>
+    <div class="period-tabs" id="bronTabs">
+      <button data-b="live" class="on">Live</button>
+      <button data-b="backtest">Backtest</button>
+      <button data-b="alles">Alles</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="summary" id="kpi"></div>
+    <div id="trendBanner"></div>
+
+    <div class="section-title">⚠ Patronen — dit is geen incident meer</div>
+    <p style="color:var(--muted);font-size:13px;margin:-6px 0 14px;" id="patroonUitleg"></p>
+    <div id="patronen"></div>
+
+    <div class="section-title">Terugkerend in je eigen woorden</div>
+    <p style="color:var(--muted);font-size:13px;margin:-6px 0 14px;">
+      Dit kijkt niet naar foutcodes maar naar de tags die jij zelf aan trades hangt.
+      Jij zag zelf dat twee trades op elkaar leken — dit hoort de journal vóór jou te zien.</p>
+    <div id="tagPatronen"></div>
+
+    <div class="chart-grid" style="margin-top:26px;">
+      <div class="chart-panel">
+        <h3>Fouten per trade over tijd</h3>
+        <p class="hint">Deze lijn moet omlaag. Dat is je leercurve.</p>
+        <div class="chart-wrap"><canvas id="cTrend"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <h3>Fouten per categorie</h3>
+        <p class="hint">Waar zit je zwakke plek: setup, risk, management, psychologie of discipline?</p>
+        <div class="chart-wrap"><canvas id="cGroep"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-title">Alle foutcodes met corrigerende regel</div>
+    <div class="mt-table-wrap">
+      <table class="mt" id="codeTable">
+        <thead>
+          <tr>
+            <th>Code</th><th style="text-align:left">Wat ging er mis</th>
+            <th>Aantal</th><th>Laatst</th><th style="text-align:left">Corrigerende regel</th>
+          </tr>
+        </thead>
+        <tbody id="codeBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="/static/vendor/chart.umd.min.js"></script>
+  <script src="/static/common.js"></script>
+  <script src="/static/fouten.js"></script>
+</body>
+</html>

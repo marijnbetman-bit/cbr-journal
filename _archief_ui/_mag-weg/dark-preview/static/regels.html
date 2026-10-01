@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Regels — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="topbar">
+    <span style="color:var(--muted);font-size:13px;">spiekbriefje</span>
+    <div class="spacer"></div>
+  </div>
+
+  <div class="container">
+    <h2 style="margin-top:0;">Jouw CBR-regels</h2>
+    <p style="color:var(--muted);margin-top:-8px;">
+      Lees dit vóór de sessie. Dit is het bias-vrije model dat de signaalbot ook gebruikt.
+    </p>
+
+    <div class="cheat-grid">
+
+      <div class="cheat accent-blue">
+        <h3>⏰ Wanneer</h3>
+        <ul>
+          <li>Venster <b>10:00–15:00</b> (NL) — van het 2e uur Londen tot een half uur voor de US-open</li>
+          <li><b>Elke handelsdag</b> (ma–vr) — elke dag is een goede dag</li>
+          <li>Ook rond het middaguur komen goede setups naar voren</li>
+        </ul>
+      </div>
+
+      <div class="cheat accent-green">
+        <h3>⚡ Het setup-model</h3>
+        <ul>
+          <li><b>1.</b> Uitbraak / impuls — moet de high/low van de <b>vorige 1H-candle</b> breken (anders geen valide setup)</li>
+          <li><b>2.</b> Kleine top met mini-pullback</li>
+          <li><b>3.</b> <b>Sweep</b> boven die top (liquidity grab)</li>
+          <li><b>4.</b> <b>Break of structure</b> de andere kant op — de vorige low van de mini-pullback wordt gebroken (candle sluit erdoor)</li>
+          <li><b>5.</b> Klaar voor de entry</li>
+        </ul>
+      </div>
+
+      <div class="cheat accent-green">
+        <h3>🔄 Richting</h3>
+        <ul>
+          <li>Na een <b>bullish</b> impuls → zoek <b>shorts</b></li>
+          <li>Na een <b>bearish</b> impuls → zoek <b>longs</b></li>
+          <li>Je handelt de omkering ná de sweep, niet mee met de impuls</li>
+        </ul>
+      </div>
+
+      <div class="cheat accent-green">
+        <h3>🎯 Entry &amp; exit</h3>
+        <ul>
+          <li>Entry op <b>50%</b> tussen de sweep-extreme en de low van de mini-pullback (de BOS)</li>
+          <li>SL <b>5+ points</b> voorbij de sweep-extreme — zodat een grab hem niet meepakt</li>
+          <li>TP = <b>1:1 RR</b>, altijd</li>
+        </ul>
+      </div>
+
+      <div class="cheat accent-blue">
+        <h3>📏 Impuls-kwaliteit</h3>
+        <p style="color:var(--muted);font-size:13px;margin:0 0 8px;">Gemeten óver de impuls zelf, niet over de omliggende chop.</p>
+        <ul>
+          <li>≥ <b>4 candles</b></li>
+          <li>Kracht ≥ <b>4× ATR(14)</b></li>
+          <li>Overlap ≤ <b>45%</b> (weinig terugtikken)</li>
+          <li>Efficiëntie ≥ <b>0,6</b> (netto beweging / som van de bodies)</li>
+        </ul>
+      </div>
+
+      <div class="cheat accent-red">
+        <h3>🛑 Invalidatie</h3>
+        <ul>
+          <li>Prijs rebalanced <b>eerst naar 50% van de impuls</b> → impuls weg, geen trade</li>
+          <li>Sweep verder dan <b>30 points</b> voorbij de top → nieuwe impuls, geen setup</li>
+          <li>Top ouder dan <b>10 minuten</b> / te veel consolidatie → verlopen</li>
+        </ul>
+      </div>
+
+      <div class="cheat accent-red">
+        <h3>🚫 Geen bias meer</h3>
+        <ul>
+          <li><b>Geen 1H-bias</b> — die is eruit, je vertrouwde het oordeel niet</li>
+          <li><b>Geen DXY</b> — voor nu uitgeschakeld</li>
+          <li>De setup staat op zichzelf: impuls → sweep → BOS → entry</li>
+          <li>Kan later terugkomen als je het wilt testen</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="panel" style="margin-top:24px;">
+      <h2>De grade volgt uit de checklist</h2>
+      <p class="sub" style="margin-bottom:14px;">Nooit uit onderbuik — dat is de hele discipline-check.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:14px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="grade grade-A">A</span><span>alle vijf ✓ — perfect</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="grade grade-B">B</span><span>drie kritische ✓ — valide</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="grade grade-C">C</span><span>kritisch criterium ✗ of ? — dit was geen trade</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">Regel-changelog</div>
+    <div class="panel">
+      <p class="sub" style="margin-bottom:14px;">
+        Wijzig je iets aan je model of je regels, zet het hier neer. Je krijgt een verticale streep in je
+        equity-curve op die dag, en een filter <b>Sinds regelwijziging</b> op het dashboard. Zonder dit
+        vervuilen je oude cijfers je nieuwe model — en dat is precies waarom journals na een jaar in de la belanden.
+      </p>
+      <div class="regel-form">
+        <label class="field" style="margin:0"><span class="lbl">Vanaf</span>
+          <input type="date" id="rwDatum" /></label>
+        <label class="field" style="margin:0;flex:1 1 240px"><span class="lbl">Wat verander je</span>
+          <input type="text" id="rwTitel" placeholder="bv. SL voortaan achter de sweep-extreme" style="width:100%" /></label>
+        <label class="field" style="margin:0;flex:1 1 240px"><span class="lbl">Waarom (optioneel)</span>
+          <input type="text" id="rwToelichting" placeholder="bv. R1 kwam 3× terug als patroon" style="width:100%" /></label>
+        <button class="btn btn-primary" id="rwSave">Vastleggen</button>
+      </div>
+      <div id="rwLijst"></div>
+    </div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/regels.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rapportkaart — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="topbar geen-print">
+    <div class="period-tabs" id="soortTabs">
+      <button data-s="maand" class="on">Maand</button>
+      <button data-s="jaar">Jaar</button>
+    </div>
+    <input type="month" id="maandKies" />
+    <input type="number" id="jaarKies" style="width:100px;display:none" step="1" />
+    <div class="spacer"></div>
+    <button class="btn" id="printKnop">Printen</button>
+  </div>
+
+  <div class="container rapport" id="rapport"></div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/rapport.js"></script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekrapport — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/home2.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="container home2 wk2">
+    <div class="wk2-kop">
+      <button class="btn" id="vorige" type="button">‹</button>
+      <div class="wk2-titel"><div class="h2-label">Weekrapport</div><h1 id="titel">Week</h1><div class="hint" id="sub"></div></div>
+      <button class="btn" id="volgende" type="button">›</button>
+      <div class="spacer" style="flex:1"></div>
+      <a class="btn btn-primary" id="pdf" href="#">⬇ PDF van deze week</a>
+    </div>
+
+    <div id="kpi"></div>
+
+    <div class="h2-grid2">
+      <div class="panel wk2-focus" id="focus"></div>
+      <div class="panel wk2-sterk" id="sterk"></div>
+    </div>
+
+    <div class="section-title">Progressie — laatste 12 weken</div>
+    <div class="wk2-prog">
+      <div class="panel chart-panel"><h3>Resultaat (R)</h3><div class="wk2-mini"><canvas id="pR"></canvas></div></div>
+      <div class="panel chart-panel"><h3>Proces-score</h3><div class="wk2-mini"><canvas id="pProces"></canvas></div></div>
+      <div class="panel chart-panel"><h3>Winrate</h3><div class="wk2-mini"><canvas id="pWin"></canvas></div></div>
+      <div class="panel chart-panel"><h3>Regels gevolgd</h3><div class="wk2-mini"><canvas id="pSchoon"></canvas></div></div>
+      <div class="panel chart-panel"><h3>Goede staat vooraf</h3><div class="wk2-mini"><canvas id="pStaat"></canvas></div></div>
+      <div class="panel chart-panel"><h3>Binnen venster</h3><div class="wk2-mini"><canvas id="pVenster"></canvas></div></div>
+    </div>
+
+    <div class="section-title">De dagen</div>
+    <div class="panel" id="dagen"></div>
+
+    <div class="section-title">De trades <span class="hint" id="nTrades"></span></div>
+    <div class="wk2-trades" id="trades"></div>
+
+    <div class="h2-grid2">
+      <div class="panel" id="lessen"></div>
+      <div class="panel" id="auto"></div>
+    </div>
+  </div>
+  <script src="/static/vendor/chart.umd.min.js"></script>
+  <script src="/static/common.js"></script>
+  <script src="/static/week.js"></script>
+</body>
+</html>

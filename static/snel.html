@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Snel loggen — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+</head>
+<body class="snel-body">
+  <div id="hoofdnav"></div>
+  <div class="snel-wrap">
+    <div class="snel-kop">
+      <a href="/" class="snel-terug">←</a>
+      <div>
+        <div class="snel-titel">Snel loggen</div>
+        <div class="snel-sub" id="snelDatumTekst"></div>
+      </div>
+      <div class="grade big grade-C" id="snelGrade">C</div>
+    </div>
+
+    <input type="date" id="snelDatum" class="snel-datum" />
+
+    <div class="snel-blok">
+      <div class="snel-lbl">Richting</div>
+      <div class="snel-duo" id="snelRichting">
+        <button type="button" data-v="long">▲ Long</button>
+        <button type="button" data-v="short">▼ Short</button>
+      </div>
+    </div>
+
+    <div class="snel-blok">
+      <div class="snel-lbl">Checklist</div>
+      <div id="snelChecklist"></div>
+    </div>
+
+    <div id="snelSlot" class="snel-slot">Beoordeel eerst alle vijf de criteria</div>
+
+    <div class="snel-blok" id="snelUitkomst">
+      <div class="snel-lbl">Uitkomst</div>
+      <div class="snel-duo-veld">
+        <label>RR<input type="number" step="0.01" id="snelRR" placeholder="1.8" inputmode="decimal" /></label>
+        <label>Resultaat €<input type="number" step="0.01" id="snelRes" placeholder="4.28" inputmode="decimal" /></label>
+      </div>
+      <div class="snel-duo-veld">
+        <label>Risk €<input type="number" step="0.01" id="snelRisk" inputmode="decimal" /></label>
+        <label>Tijd<input type="time" id="snelTijd" /></label>
+      </div>
+      <div class="snel-lbl" style="margin-top:14px">Hoe dicht bij je SL?</div>
+      <div class="snel-trio" id="snelSL">
+        <button type="button" data-v="nooit">nooit</button>
+        <button type="button" data-v="halverwege">halverwege</button>
+        <button type="button" data-v="bijna">bijna</button>
+      </div>
+      <div class="snel-lbl" style="margin-top:12px">En je TP?</div>
+      <div class="snel-trio" id="snelTP">
+        <button type="button" data-v="precies">precies</button>
+        <button type="button" data-v="liep_door">liep door</button>
+        <button type="button" data-v="te_vroeg">te vroeg</button>
+      </div>
+    </div>
+
+    <div class="snel-blok">
+      <div class="snel-lbl">Screenshot</div>
+      <label class="snel-shot" id="snelShotLabel">
+        <input type="file" id="snelFile" accept="image/*" hidden />
+        <span id="snelShotTekst">📷 Kies of maak een foto</span>
+      </label>
+      <div id="snelPreview"></div>
+    </div>
+
+    <div class="snel-blok">
+      <div class="snel-lbl">Hoe voelde je je?</div>
+      <div class="chips" id="snelEmoties"></div>
+    </div>
+
+    <div class="snel-blok">
+      <div class="snel-lbl">Les (één zin)</div>
+      <input type="text" id="snelLes" class="snel-tekst" placeholder="Wat neem je hiervan mee?" />
+    </div>
+
+    <button class="snel-opslaan" id="snelSave">Opslaan</button>
+    <a href="/" class="snel-annuleer">Annuleren</a>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/snel.js"></script>
+</body>
+</html>

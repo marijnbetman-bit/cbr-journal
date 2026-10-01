@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekreview — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="topbar">
+    <span style="color:var(--muted);font-size:13px;">weekreview</span>
+    <div class="spacer"></div>
+  </div>
+
+  <div class="container" style="max-width:900px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px;">
+      <button class="btn" id="vorigeWeek">← Vorige week</button>
+      <h2 id="weekTitel" style="margin:0;font-size:19px;">Week</h2>
+      <button class="btn" id="volgendeWeek">Volgende week →</button>
+    </div>
+
+    <div id="vorigeFocus"></div>
+    <div class="summary" id="weekKpi"></div>
+
+    <div class="panel">
+      <h2>Wat de cijfers zeggen</h2>
+      <p class="sub">Automatisch samengevat uit je trades van deze week.</p>
+      <ul id="hoogtepunten" class="hoog"></ul>
+    </div>
+
+    <div class="panel">
+      <h2>Jouw weekreview</h2>
+      <p class="sub">Drie vragen. De focus die je hier invult, staat volgende week bovenaan je dagoverzicht.</p>
+      <label class="field"><span class="lbl">Wat ging goed</span>
+        <textarea id="goed" rows="3" placeholder="Welke setups en welk gedrag wil je herhalen?"></textarea></label>
+      <label class="field"><span class="lbl">Wat kon beter</span>
+        <textarea id="beter" rows="3" placeholder="Waar liep je tegenaan?"></textarea></label>
+      <label class="field"><span class="lbl">Focus voor volgende week — één ding</span>
+        <input type="text" id="focus" style="width:100%" placeholder="bv. geen entry zonder bevestigde shift" /></label>
+      <button class="btn btn-primary" id="saveReview">Weekreview opslaan</button>
+    </div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/week.js"></script>
+</body>
+</html>

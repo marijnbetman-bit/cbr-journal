@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>No-trade — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+
+  <div class="container" style="max-width:640px;">
+    <h2 id="formTitle" style="margin-top:0;">No-trade toevoegen</h2>
+    <p style="color:var(--muted);margin-top:-6px;">
+      Bewust weggebleven is net zo waardevol als een trade. Leg vast wat je zag.
+    </p>
+
+    <div class="panel">
+      <div class="row2">
+        <label class="field"><span class="lbl">Datum</span>
+          <input type="date" id="datum" style="width:100%" /></label>
+        <label class="field"><span class="lbl">Tijd</span>
+          <input type="time" id="tijd" style="width:100%" /></label>
+      </div>
+      <label class="field"><span class="lbl">Reden om weg te blijven</span>
+        <textarea id="reden" rows="2"></textarea></label>
+      <label class="field"><span class="lbl">Wat zag ik</span>
+        <textarea id="wat_zag_ik" rows="3"></textarea></label>
+    </div>
+
+    <div class="panel">
+      <h2>Screenshots</h2>
+      <p class="sub">Sleep de chart hierin waar je (bewust) wegbleef.</p>
+      <div class="dropzone" id="dropzone">
+        <div class="big">🖼️</div>
+        <div>Sleep hier je screenshots naartoe</div>
+      </div>
+      <div class="shot-grid" id="shotGrid"></div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" id="saveBtn">Opslaan</button>
+      <a class="btn btn-ghost" href="/">Annuleren</a>
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn btn-danger" id="deleteBtn" style="display:none">Verwijderen</button>
+    </div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/notrade.js"></script>
+</body>
+</html>

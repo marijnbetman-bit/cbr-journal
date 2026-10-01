@@ -1,0 +1,1304 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<style>html,body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>CBR Fase 2 — Bias Eerst</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+/* ─────────── tokens ─────────── */
+:root{
+  --bg:#f7f4ef; --surface:#fff; --surface-2:#efebe3;
+  --text:#181c25; --text-2:#4a5263; --text-3:#868f9f;
+  --border:#ddd7cd; --border-2:#e8e3da;
+
+  /* UI signal colours — adapt per theme */
+  --bull:#0d9668; --bear:#dc2f4e; --shift:#6d4dea; --entry:#b07d05;
+  --wrong-bg:rgba(220,47,78,.055); --right-bg:rgba(13,150,104,.055);
+  --shift-bg:rgba(109,77,234,.06);
+
+  /* chart colours — panels are dark in BOTH themes, so these never change */
+  --c-bg:#10141c; --c-grid:#1d2735; --c-mute:#7b8798;
+  --c-bull:#22d3a5; --c-bear:#ff5a75; --c-shift:#a78bfa;
+  --c-shift-dim:#7c5cf0; --c-entry:#fbbf24;
+
+  --r:11px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b0e13; --surface:#141822; --surface-2:#1a1f2a;
+    --text:#e3e6ed; --text-2:#98a2b5; --text-3:#606a7c;
+    --border:#1f2531; --border-2:#1a1f2a;
+    --bull:#16c095; --bear:#ff5570; --shift:#a78bfa; --entry:#eab308;
+    --wrong-bg:rgba(255,85,112,.07); --right-bg:rgba(22,192,149,.07);
+    --shift-bg:rgba(167,139,250,.08);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b0e13; --surface:#141822; --surface-2:#1a1f2a;
+  --text:#e3e6ed; --text-2:#98a2b5; --text-3:#606a7c;
+  --border:#1f2531; --border-2:#1a1f2a;
+  --bull:#16c095; --bear:#ff5570; --shift:#a78bfa; --entry:#eab308;
+  --wrong-bg:rgba(255,85,112,.07); --right-bg:rgba(22,192,149,.07);
+  --shift-bg:rgba(167,139,250,.08);
+}
+
+/* ─────────── base ─────────── */
+*{box-sizing:border-box}
+body{
+  font-family:'Outfit',system-ui,-apple-system,'Segoe UI',sans-serif;
+  background:var(--bg); color:var(--text);
+  padding-inline:20px; padding-block:34px 80px;
+  line-height:1.6; margin:0;
+}
+.page{max-width:660px;margin:0 auto}
+.mono{font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace}
+
+h1{
+  font-size:clamp(30px,7.5vw,42px); font-weight:800;
+  letter-spacing:-.028em; line-height:1.08;
+  text-wrap:balance; margin:0 0 8px;
+}
+h1 .a{color:var(--shift)}
+h2{font-size:21px;font-weight:700;letter-spacing:-.012em;margin:0 0 8px}
+h3{font-size:15.5px;font-weight:600;margin:0 0 8px}
+p{margin:0 0 14px}
+
+.sub{font-size:16.5px;color:var(--text-2);margin:0 0 14px}
+.desc{color:var(--text-2);font-size:15px;margin:0 0 18px}
+
+.meta{
+  display:flex;flex-wrap:wrap;gap:6px;margin-bottom:38px;
+}
+.pill{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:11px;letter-spacing:.02em;
+  padding:4px 10px;border-radius:100px;
+  background:var(--surface-2);color:var(--text-2);
+  border:1px solid var(--border-2);
+}
+
+.section{margin-bottom:52px}
+.sep{height:1px;background:var(--border);margin-block:44px}
+
+/* ─────────── gates (de check) ─────────── */
+.gates{list-style:none;padding:0;margin:0;position:relative}
+.gates::before{
+  content:"";position:absolute;left:13px;top:14px;bottom:26px;
+  width:2px;background:var(--border);border-radius:2px;
+}
+.gate{
+  position:relative;display:flex;gap:14px;
+  padding:0 0 18px 0;
+}
+.g-n{
+  position:relative;z-index:1;flex:0 0 auto;
+  width:28px;height:28px;border-radius:50%;
+  display:grid;place-items:center;
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:12px;font-weight:700;color:#fff;
+  background:var(--text-3);
+  box-shadow:0 0 0 4px var(--bg);
+}
+.gate--key .g-n{background:var(--shift);width:32px;height:32px;font-size:13px;margin-left:-2px}
+.g-body{flex:1;min-width:0;padding-top:2px}
+.g-q{font-size:15.5px;font-weight:600;line-height:1.35}
+.gate--key .g-q{font-size:17px;color:var(--shift)}
+.g-hint{font-size:13px;color:var(--text-3);margin-top:2px;line-height:1.45}
+.g-fail{
+  font-size:13px;color:var(--bear);margin-top:6px;line-height:1.45;
+  display:flex;gap:6px;align-items:baseline;
+}
+.g-fail::before{content:"✗";font-weight:700;flex:0 0 auto}
+.gate--key .g-body{
+  background:var(--shift-bg);border-radius:9px;
+  padding:12px 14px;margin-top:-8px;
+}
+
+.verdict-line{
+  margin-top:4px;padding:14px 16px;border-radius:9px;
+  background:var(--right-bg);border-left:3px solid var(--bull);
+  font-size:15px;font-weight:600;
+}
+.verdict-line span{color:var(--bull)}
+
+/* ─────────── charts ─────────── */
+.chart{
+  background:var(--c-bg);border-radius:var(--r);
+  padding:18px 12px 10px;margin:0 0 18px;
+}
+.chart svg{display:block;width:100%;height:auto}
+.cl{font-family:'JetBrains Mono',ui-monospace,monospace}
+
+.ctrl{
+  display:flex;align-items:center;gap:12px;
+  padding:8px 6px 2px;min-height:30px;
+}
+.ctrl button{
+  font-family:'Outfit',system-ui,sans-serif;
+  font-size:12.5px;font-weight:600;
+  color:#e8eaf0;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.12);
+  padding:5px 13px;border-radius:100px;cursor:pointer;
+  transition:background .16s ease;flex:0 0 auto;
+}
+.ctrl button:hover{background:rgba(255,255,255,.13)}
+.ctrl button:focus-visible{outline:2px solid var(--c-shift);outline-offset:2px}
+.cap{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:11px;color:var(--c-mute);line-height:1.35;
+  min-width:0;
+}
+.cap.hot{color:var(--c-shift)}
+
+/* ─────────── steps ─────────── */
+.steps{display:flex;flex-direction:column;gap:6px}
+.step{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:11px 14px;background:var(--surface-2);
+  border-radius:9px;font-size:14px;line-height:1.5;
+  border-left:3px solid transparent;
+  transition:border-color .2s ease,background .2s ease;
+}
+.step.on{border-left-color:var(--shift);background:var(--shift-bg)}
+.sn{
+  flex:0 0 auto;width:22px;height:22px;border-radius:50%;
+  display:grid;place-items:center;
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:11px;font-weight:700;color:#fff;margin-top:1px;
+}
+.step strong{font-weight:600}
+.step em{
+  font-style:normal;text-decoration:underline;
+  text-decoration-color:var(--shift);text-decoration-thickness:2px;
+  text-underline-offset:2px;
+}
+
+/* ─────────── callout ─────────── */
+.callout{
+  background:var(--shift-bg);border-radius:var(--r);
+  padding:20px;border-left:3px solid var(--shift);
+}
+.callout h3{color:var(--shift)}
+.callout p{font-size:14.5px;color:var(--text-2);margin-bottom:0}
+.callout p+p{margin-top:10px}
+
+/* ─────────── verdict cards ─────────── */
+.card{border-radius:var(--r);padding:20px;margin-bottom:14px}
+.card.no{background:var(--wrong-bg);border-left:3px solid var(--bear)}
+.card.yes{background:var(--right-bg);border-left:3px solid var(--bull)}
+.card p{font-size:14px;color:var(--text-2);margin-bottom:10px;line-height:1.55}
+.card .ref{font-size:12.5px;color:var(--text-3);font-style:italic;display:block}
+.card .chart{margin-bottom:10px;padding:14px 10px 6px}
+
+/* ─────────── grades ─────────── */
+.grades{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.grade{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:16px 16px 18px;
+}
+.grade .g{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:26px;font-weight:700;line-height:1;margin-bottom:8px;
+}
+.grade.a .g{color:var(--bull)} .grade.b .g{color:var(--entry)} .grade.c .g{color:var(--bear)}
+.grade .t{font-size:13.5px;font-weight:600;margin-bottom:5px;line-height:1.35}
+.grade .d{font-size:12.5px;color:var(--text-3);line-height:1.5}
+
+/* ─────────── log ─────────── */
+.log{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:6px 18px;
+}
+.row{padding:14px 0;border-bottom:1px solid var(--border-2)}
+.row:last-child{border-bottom:none}
+.row .h{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:12px;color:var(--text-3);
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:4px;
+}
+.row .h b{font-weight:700;color:var(--text-2)}
+.tag{
+  font-weight:700;padding:1px 7px;border-radius:4px;font-size:11px;
+}
+.tag.a{color:var(--bull);background:var(--right-bg)}
+.tag.b{color:var(--entry);background:rgba(176,125,5,.09)}
+.tag.c{color:var(--bear);background:var(--wrong-bg)}
+.row .l{font-size:14px;line-height:1.5;color:var(--text-2)}
+.row .l b{color:var(--text);font-weight:600}
+
+.total{
+  display:flex;justify-content:space-between;align-items:baseline;
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:13px;padding:14px 0 4px;margin-top:2px;
+  border-top:2px solid var(--border);color:var(--text-2);
+}
+.total b{color:var(--bear);font-size:15px}
+
+/* ─────────── checklist ─────────── */
+.final{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:24px;
+}
+.chk{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:11px 0;border-bottom:1px solid var(--border-2);
+  font-size:14px;line-height:1.45;
+}
+.chk:last-child{border-bottom:none;padding-bottom:0}
+.cb{
+  flex:0 0 auto;width:19px;height:19px;border-radius:5px;
+  border:2px solid var(--shift);margin-top:1px;opacity:.55;
+}
+
+.foot{
+  text-align:center;color:var(--text-3);
+  font-size:13.5px;margin-top:20px;font-weight:500;
+}
+
+@media (max-width:480px){
+  .step{padding:9px 11px;font-size:13.5px}
+  .card,.final{padding:17px}
+  .log{padding:4px 15px}
+  .chart{padding:14px 8px 8px}
+  .gate--key .g-body{padding:11px 12px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+
+/* ─────────── nav ─────────── */
+.nav{
+  display:flex;gap:6px;margin:0 0 40px;
+  overflow-x:auto;padding-bottom:4px;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;
+}
+.nav::-webkit-scrollbar{display:none}
+.nav a{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:11.5px;text-decoration:none;white-space:nowrap;flex:0 0 auto;
+  padding:6px 13px;border-radius:100px;
+  background:var(--surface);color:var(--text-2);
+  border:1px solid var(--border);
+  transition:border-color .16s ease,color .16s ease;
+}
+.nav a:hover{border-color:var(--shift);color:var(--shift)}
+.nav a:focus-visible{outline:2px solid var(--shift);outline-offset:2px}
+
+/* ─────────── replay ─────────── */
+.replay{
+  background:var(--c-bg);border-radius:var(--r);
+  padding:16px 10px 8px;margin:0 0 18px;
+}
+.replay svg{display:block;width:100%;height:auto}
+.replay .cd,.replay .ev,.replay .tr,.replay .sw{transition:opacity .2s ease}
+.rt{
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  font-size:14.5px;font-weight:600;color:var(--text-2);margin:0 0 10px;
+}
+.rt+.replay{margin-bottom:28px}
+.rt .dir{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;
+}
+.rt .dir.s{color:var(--bear);background:var(--wrong-bg)}
+.rt .dir.l{color:var(--bull);background:var(--right-bg)}
+@keyframes slflash{0%,100%{opacity:1}50%{opacity:.2}}
+.slhit{animation:slflash .42s ease 3}
+
+/* ─────────── failure taxonomy ─────────── */
+.fails{display:flex;flex-direction:column;gap:12px}
+.fail{
+  background:var(--surface);border:1px solid var(--border);
+  border-left:3px solid var(--bear);
+  border-radius:var(--r);padding:17px 19px;
+}
+.fail-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.fail-code{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:11px;font-weight:700;color:var(--bear);
+  background:var(--wrong-bg);padding:3px 8px;border-radius:5px;flex:0 0 auto;
+}
+.fail-t{font-size:15.5px;font-weight:600;flex:1;min-width:120px;line-height:1.3}
+.fail-cost{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:14px;font-weight:700;color:var(--bear);flex:0 0 auto;
+}
+.fail-cost.q{font-size:11px;font-weight:400;color:var(--text-3)}
+.fail p{font-size:13.5px;color:var(--text-2);margin:0 0 10px;line-height:1.55}
+.fail-src{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:11.5px;color:var(--text-3);
+  display:block;margin-bottom:10px;line-height:1.85;
+}
+.fail-fix{
+  font-size:13.5px;line-height:1.5;color:var(--text-2);
+  padding:10px 13px;border-radius:7px;
+  background:var(--right-bg);border-left:2px solid var(--bull);
+}
+.fail-fix b{color:var(--bull);font-weight:600}
+.fail.root{border-left-color:var(--shift)}
+.fail.root .fail-code{color:var(--shift);background:var(--shift-bg)}
+.fail.won{border-left-color:var(--entry)}
+.fail.won .fail-code{color:var(--entry);background:rgba(176,125,5,.1)}
+.fail.won .fail-cost{color:var(--entry)}
+.fail .replay{margin:2px 0 12px}
+
+.win-note{
+  background:var(--right-bg);border-left:3px solid var(--bull);
+  border-radius:var(--r);padding:19px;margin-top:18px;
+}
+.win-note h3{color:var(--bull)}
+.win-note p{font-size:14px;color:var(--text-2);margin:0;line-height:1.55}
+.win-note .ref{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-size:11.5px;color:var(--text-3);display:block;margin-top:9px;
+}
+
+/* ─────────── fase 2 ─────────── */
+.fase-badge{
+  display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;
+  color:var(--shift);background:var(--shift-bg);
+  padding:5px 11px;border-radius:100px;margin-bottom:12px;
+}
+.blok-kop{
+  font-size:11px;font-weight:700;letter-spacing:.07em;color:var(--text-3);
+  margin:26px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border);
+}
+.blok-kop:first-of-type{margin-top:0}
+
+/* oud vs nieuw */
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.vs{grid-template-columns:1fr}}
+.vs-kant{border-radius:var(--r);padding:18px}
+.vs-kant.oud{background:var(--wrong-bg);border-left:3px solid var(--bear)}
+.vs-kant.nieuw{background:var(--right-bg);border-left:3px solid var(--bull)}
+.vs-lbl{font-size:11px;font-weight:700;letter-spacing:.05em;margin-bottom:9px}
+.vs-kant.oud .vs-lbl{color:var(--bear)}
+.vs-kant.nieuw .vs-lbl{color:var(--bull)}
+.vs-kant p{font-size:13.5px;color:var(--text-2);margin:0 0 11px;line-height:1.55}
+.vs-uit{font-size:13px;font-weight:700}
+.vs-kant.oud .vs-uit{color:var(--bear)}
+.vs-kant.nieuw .vs-uit{color:var(--bull)}
+
+/* context-strip boven een replay */
+.ctx{
+  display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px;
+}
+.ctx-r{
+  display:flex;align-items:center;gap:7px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:100px;padding:5px 12px;
+}
+.ctx-k{font-size:10.5px;color:var(--text-3);letter-spacing:.03em}
+.ctx-v{font-size:11.5px;font-weight:700}
+.ctx-v.bull{color:var(--bull)} .ctx-v.bear{color:var(--bear)}
+.ctx-v.ok{color:var(--text-2);font-weight:500}
+</style>
+
+<div class="page">
+
+  <div class="fase-badge mono">FASE 2 · vanaf 11 september</div>
+  <h1>Bias <span class="a">eerst</span></h1>
+  <p class="sub">De 1H-trend bepaalt de richting. Pas daarna zoek je de setup.</p>
+  <div class="meta">
+    <span class="pill">XAUUSD</span>
+    <span class="pill">11:00–12:00 NL · 2e uur London</span>
+    <span class="pill">max 2 pogingen</span>
+  </div>
+
+  <nav class="nav">
+    <a href="#omkering">De omkering</a>
+    <a href="#check">De check</a>
+    <a href="#bias">Bias bepalen</a>
+    <a href="#expansie">Expansie</a>
+    <a href="#trade">Hele trade</a>
+    <a href="#shift">De shift</a>
+    <a href="#wick">Wick-regel</a>
+    <a href="#geen">Geen trade</a>
+  </nav>
+
+  <!-- ══════════ DE OMKERING ══════════ -->
+  <div class="section" id="omkering">
+    <h2>Wat er is omgedraaid</h2>
+    <p class="desc">Dit is het stuk dat je moet afleren voordat de rest zin heeft.</p>
+
+    <div class="vs">
+      <div class="vs-kant oud">
+        <div class="vs-lbl mono">FASE 1 — wat je deed</div>
+        <p>Je zag een high of low gesweept worden en handelde daar tegenin. De sweep zelf
+           was het signaal. Welke kant de markt op wilde deed er niet toe — je nam elke
+           kant, zolang de structuur er maar mooi uitzag.</p>
+        <div class="vs-uit mono">−14,57 over 16 trades</div>
+      </div>
+      <div class="vs-kant nieuw">
+        <div class="vs-lbl mono">FASE 2 — wat je nu doet</div>
+        <p>De 1H-trend bepaalt eerst de richting. Daarna wacht je op een beweging de
+           ándere kant op, die de liquiditeit ophaalt, en stap je pas in als de markt
+           terugdraait naar je bias. De sweep is niet het signaal — het is het aas.</p>
+        <div class="vs-uit mono">alleen A+ setups</div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:18px">
+      <h3>In één zin</h3>
+      <p>Bij een <b>bullish</b> 1H-bias wacht je op een beweging naar <b>beneden</b>, en koop
+         je pas als die omkeert. Bij een <b>bearish</b> bias wacht je op een beweging naar
+         <b>boven</b>, en verkoop je pas als die omkeert. Je handelt nooit tegen de 1H-trend in,
+         hoe overtuigend de shift er ook uitziet.</p>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ DE CHECK ══════════ -->
+  <div class="section" id="check">
+    <h2>De check</h2>
+    <p class="desc">Twee blokken. Het eerste beslist of je vandaag überhaupt mag kijken,
+       het tweede of déze setup het is.</p>
+
+    <div class="blok-kop mono">VOORAF — mag ik vandaag handelen?</div>
+    <ol class="gates">
+      <li class="gate">
+        <span class="g-n">1</span>
+        <div class="g-body">
+          <div class="g-q">Zit je in het venster?</div>
+          <div class="g-hint">11:00–12:00 Nederlandse tijd</div>
+          <div class="g-fail">Buiten dit uur handel je niet. Punt.</div>
+        </div>
+      </li>
+      <li class="gate gate--key">
+        <span class="g-n">2</span>
+        <div class="g-body">
+          <div class="g-q">Is je 1H-bias overtuigend?</div>
+          <div class="g-hint">Niet "het lijkt een beetje bullish" — je moet het echt zien</div>
+          <div class="g-fail">Twijfel je over de richting, dan is er geen trade. Een onduidelijke bias maakt elke setup daarna waardeloos.</div>
+        </div>
+      </li>
+      <li class="gate gate--key">
+        <span class="g-n">3</span>
+        <div class="g-body">
+          <div class="g-q">Bewegen goud en DXY tegengesteld op HTF?</div>
+          <div class="g-hint">Goud bullish hoort samen te gaan met een bearish dollar</div>
+          <div class="g-fail">Lopen ze mee, dan geen trade. Geen uitzondering tenzij de rest echt A+ is — en dat is het zelden.</div>
+        </div>
+      </li>
+      <li class="gate">
+        <span class="g-n">4</span>
+        <div class="g-body">
+          <div class="g-q">Is het rebalance-doel nog niet geraakt?</div>
+          <div class="g-hint">Het midpoint waar je naartoe zou handelen</div>
+          <div class="g-fail">Is de rebalance al geweest, dan is de setup weg. Je target ligt achter je; er valt niets meer op te halen.</div>
+        </div>
+      </li>
+    </ol>
+
+    <div class="blok-kop mono">TIJDENS — is dit de setup?</div>
+    <ol class="gates">
+      <li class="gate">
+        <span class="g-n">5</span>
+        <div class="g-body">
+          <div class="g-q">20+ minuten schone expansie wég van je bias?</div>
+          <div class="g-hint">Prijs moet eenzijdig de verkeerde kant op lopen, zonder noemenswaardige pullbacks. Dát is wat de behoefte aan een rebalance creëert.</div>
+          <div class="g-fail">Choppy heen-en-weer is geen expansie. Zie de vergelijking hieronder.</div>
+        </div>
+      </li>
+      <li class="gate">
+        <span class="g-n">6</span>
+        <div class="g-body">
+          <div class="g-q">Is de liquiditeit opgehaald?</div>
+          <div class="g-hint">Sweep van de low (bullish bias) of high (bearish bias) van het 1e sessie-uur — of een rebalance van een recente trending move. <b>Een wick door het niveau is genoeg;</b> hier hoeft geen candle achter te sluiten.</div>
+          <div class="g-fail">Zonder sweep sta je vóór de liquiditeit in plaats van erachter.</div>
+        </div>
+      </li>
+      <li class="gate gate--key">
+        <span class="g-n">7</span>
+        <div class="g-body">
+          <div class="g-q">Type-3 shift terug in je biasrichting?</div>
+          <div class="g-hint">Eerst lokale structuur weggenomen, dán een close voorbij de wick high/low van de leg — en wel de kant op die je bias aangeeft</div>
+          <div class="g-fail">Een shift tegen je bias in is continuatie van de tegenbeweging, geen omkering. Dat is geen setup, dat is de val.</div>
+        </div>
+      </li>
+      <li class="gate">
+        <span class="g-n">8</span>
+        <div class="g-body">
+          <div class="g-q">Retrace naar 50% van de shift?</div>
+          <div class="g-hint">Entry op het midden van de shift-beweging</div>
+          <div class="g-fail">Geen retrace = geen entry. Dat kost je ongeveer 30% van de setups, en dat hoort zo.</div>
+        </div>
+      </li>
+      <li class="gate">
+        <span class="g-n">9</span>
+        <div class="g-body">
+          <div class="g-q">Haalt de RR minimaal 1,5?</div>
+          <div class="g-hint">SL op het extreme van de shift · TP op de rebalance of 1,5R</div>
+          <div class="g-fail">Past de SL niet achter het shift-extreme met 1,5R eruit, dan is de structuur te wijd om te traden.</div>
+        </div>
+      </li>
+    </ol>
+
+    <div class="verdict-line">Negen keer ja? <span>Dan pas entry.</span></div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ BIAS ══════════ -->
+  <div class="section" id="bias">
+    <h2>De bias bepalen</h2>
+    <p class="desc">Dit gebeurt vóór het venster. Als dit niet staat, is de rest van de pagina niet van toepassing.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="sn" style="background:var(--shift)">1</div>
+        <div><strong>Zoom uit naar de 1H</strong> — waar komt de prijs vandaan en waar wil hij heen? Een reeks hogere highs en hogere lows is bullish; het omgekeerde bearish. Kun je het niet in één blik zien, dan is het niet duidelijk genoeg.</div>
+      </div>
+      <div class="step">
+        <div class="sn" style="background:var(--shift)">2</div>
+        <div><strong>Kijk naar de 1H candle-formaties</strong> — een engulfing candle op het 1e sessie-uur maakt continuatie in die richting waarschijnlijker. Dat is bevestiging, geen bewijs op zichzelf.</div>
+      </div>
+      <div class="step">
+        <div class="sn" style="background:var(--shift)">3</div>
+        <div><strong>Check de DXY op dezelfde timeframe</strong> — die hoort precies de andere kant op te lopen. Goud omhoog met een dollar die ook omhoog gaat betekent dat één van de twee liegt, en je weet niet welke.</div>
+      </div>
+      <div class="step">
+        <div class="sn" style="background:var(--shift)">4</div>
+        <div><strong>Kijk waar de rebalance ligt</strong> — welk niveau moet de markt nog ophalen? Dat is straks je target. Is het al opgehaald, dan is er vandaag niets te doen.</div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:18px">
+      <h3>De eerlijkheidstest</h3>
+      <p>Als je jezelf hoort zeggen "het is een beetje bullish" of "ik denk dat de dollar wel
+         zal dalen", dan heb je geen bias maar een hoop. Het verschil is dat je een bias kunt
+         uitleggen in één zin zonder het woord <em>denk</em> te gebruiken.</p>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <!-- ══════════ EXPANSIE ══════════ -->
+  <div class="section" id="expansie">
+    <h2>Expansie: goed en slecht</h2>
+    <p class="desc">Twintig minuten eenzijdige beweging klinkt als een tijdsduur, maar het gaat om de vórm.</p>
+
+    <figure class="chart" style="margin:0 0 18px">
+      <svg viewBox="0 0 440 230" fill="none" role="img" aria-label="Links een schone expansie: candles lopen in een strakke lijn weg van het niveau. Rechts een slechte: candles overlappen elkaar rond het niveau zonder richting.">
+        <!-- ── GOED ── -->
+        <text x="105" y="20" text-anchor="middle" class="cl" fill="var(--c-bull)" font-size="11" font-weight="700">GOED</text>
+        <!-- referentiecandle -->
+        <line x1="46" y1="58" x2="46" y2="196" stroke="var(--c-mute)" stroke-width="1.4"/>
+        <rect x="37" y="92" width="18" height="76" fill="var(--c-mute)" opacity=".55" rx="1.5"/>
+        <line x1="30" y1="58" x2="180" y2="58" stroke="var(--c-mute)" stroke-dasharray="3 3" opacity=".7"/>
+        <text x="182" y="61" class="cl" fill="var(--c-mute)" font-size="8.5">high</text>
+        <!-- strakke expansie eroverheen -->
+        <g stroke="var(--c-bull)" stroke-width="1.2">
+          <line x1="70" y1="78" x2="70" y2="94"/><line x1="80" y1="68" x2="80" y2="84"/>
+          <line x1="90" y1="58" x2="90" y2="76"/><line x1="100" y1="48" x2="100" y2="66"/>
+          <line x1="110" y1="40" x2="110" y2="56"/><line x1="120" y1="33" x2="120" y2="48"/>
+          <line x1="130" y1="27" x2="130" y2="41"/><line x1="140" y1="22" x2="140" y2="35"/>
+        </g>
+        <g fill="var(--c-bull)">
+          <rect x="67" y="80" width="6" height="12" rx="1"/><rect x="77" y="70" width="6" height="12" rx="1"/>
+          <rect x="87" y="60" width="6" height="14" rx="1"/><rect x="97" y="50" width="6" height="14" rx="1"/>
+          <rect x="107" y="42" width="6" height="12" rx="1"/><rect x="117" y="35" width="6" height="11" rx="1"/>
+          <rect x="127" y="29" width="6" height="10" rx="1"/><rect x="137" y="24" width="6" height="9" rx="1"/>
+        </g>
+        <text x="105" y="216" text-anchor="middle" class="cl" fill="var(--c-mute)" font-size="9">elke candle boven de vorige · geen overlap</text>
+
+        <!-- scheiding -->
+        <line x1="222" y1="28" x2="222" y2="200" stroke="var(--c-grid)"/>
+
+        <!-- ── SLECHT ── -->
+        <text x="330" y="20" text-anchor="middle" class="cl" fill="var(--c-bear)" font-size="11" font-weight="700">SLECHT</text>
+        <line x1="266" y1="58" x2="266" y2="196" stroke="var(--c-mute)" stroke-width="1.4"/>
+        <rect x="257" y="92" width="18" height="76" fill="var(--c-mute)" opacity=".55" rx="1.5"/>
+        <line x1="250" y1="58" x2="412" y2="58" stroke="var(--c-mute)" stroke-dasharray="3 3" opacity=".7"/>
+        <text x="414" y="61" class="cl" fill="var(--c-mute)" font-size="8.5">high</text>
+        <!-- chop rond het niveau -->
+        <g stroke="var(--c-bear)" stroke-width="1.2">
+          <line x1="290" y1="62" x2="290" y2="84"/><line x1="300" y1="50" x2="300" y2="78"/>
+          <line x1="310" y1="56" x2="310" y2="80"/><line x1="320" y1="44" x2="320" y2="74"/>
+          <line x1="330" y1="54" x2="330" y2="82"/><line x1="340" y1="46" x2="340" y2="72"/>
+          <line x1="350" y1="58" x2="350" y2="78"/><line x1="360" y1="42" x2="360" y2="70"/>
+          <line x1="370" y1="52" x2="370" y2="76"/><line x1="380" y1="40" x2="380" y2="66"/>
+        </g>
+        <g fill="var(--c-bear)">
+          <rect x="287" y="66" width="6" height="14" rx="1"/><rect x="297" y="56" width="6" height="16" rx="1"/>
+          <rect x="307" y="60" width="6" height="15" rx="1"/><rect x="317" y="50" width="6" height="18" rx="1"/>
+          <rect x="327" y="58" width="6" height="18" rx="1"/><rect x="337" y="52" width="6" height="14" rx="1"/>
+          <rect x="347" y="62" width="6" height="12" rx="1"/><rect x="357" y="48" width="6" height="16" rx="1"/>
+          <rect x="367" y="56" width="6" height="14" rx="1"/><rect x="377" y="46" width="6" height="14" rx="1"/>
+        </g>
+        <text x="330" y="216" text-anchor="middle" class="cl" fill="var(--c-mute)" font-size="9">candles overlappen · geen richting</text>
+      </svg>
+    </figure>
+
+    <div class="callout">
+      <h3>Waarom dit telt</h3>
+      <p>Schone expansie betekent dat één kant van de markt het volledig overneemt en de
+         andere kant er niet tussen komt. Dat is de onbalans waar je straks op handelt.</p>
+      <p>Chop rond het niveau betekent dat beide kanten er nog zijn. Er is dan niets
+         opgehaald en niets uit balans — en een shift die daaruit ontstaat betekent net
+         zo weinig als de beweging ervoor.</p>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ HELE TRADE ══════════ -->
+  <div class="section" id="trade">
+    <h2>De hele trade</h2>
+    <p class="desc">Twee complete setups. Let op de volgorde: de bias staat er al vóórdat
+       de eerste candle print.</p>
+
+    <div class="ctx">
+      <div class="ctx-r"><span class="ctx-k mono">1H-bias</span><span class="ctx-v bear">BEARISH</span></div>
+      <div class="ctx-r"><span class="ctx-k mono">DXY</span><span class="ctx-v ok">bullish — invers ✓</span></div>
+      <div class="ctx-r"><span class="ctx-k mono">Rebalance</span><span class="ctx-v ok">nog niet geraakt ✓</span></div>
+    </div>
+    <div class="rt"><span class="dir s">SHORT</span> De tegenbeweging omhoog wordt verkocht</div>
+    <div class="replay" data-replay="bear"></div>
+
+    <div class="ctx">
+      <div class="ctx-r"><span class="ctx-k mono">1H-bias</span><span class="ctx-v bull">BULLISH</span></div>
+      <div class="ctx-r"><span class="ctx-k mono">DXY</span><span class="ctx-v ok">bearish — invers ✓</span></div>
+      <div class="ctx-r"><span class="ctx-k mono">Rebalance</span><span class="ctx-v ok">nog niet geraakt ✓</span></div>
+    </div>
+    <div class="rt"><span class="dir l">LONG</span> De tegenbeweging omlaag wordt gekocht</div>
+    <div class="replay" data-replay="bull"></div>
+
+    <div class="callout">
+      <h3>Let op wat de sweep is</h3>
+      <p>In beide replays gaat de prijs eerst de verkeerde kant op. Dat voelt als het
+         tegenovergestelde van je bias, en dat is precies de bedoeling: daar liggen de stops
+         die opgehaald moeten worden voordat de markt zijn richting weer oppakt. Als je op
+         dat moment van bias wisselt, sta je aan de verkeerde kant van je eigen analyse.</p>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+  <!-- ══════════ DE SHIFT ══════════ -->
+  <div class="section" id="shift" data-pattern>
+    <h2>De type-3 shift</h2>
+    <p class="desc">De shift zelf is niet veranderd. Wat wél veranderde: hij telt alleen mee
+       als hij de kant op wijst die je 1H-bias aangeeft, en je stapt in op de
+       <strong>eerste</strong> pullback — niet op de tweede.</p>
+
+    <figure class="chart" data-anim style="margin:0 0 18px">
+      <svg viewBox="0 0 400 268" fill="none" role="img" aria-label="Anatomie van een bearish type 3 shift: expansie omhoog door de 1hr high, hogere high, body-close onder de wick low van de leg, entry op de eerste pullback naar 50 procent, target op de rebalance.">
+        <line x1="32" y1="250" x2="390" y2="250" stroke="var(--c-grid)" stroke-width="1"/>
+        <line x1="32" y1="14" x2="32" y2="250" stroke="var(--c-grid)" stroke-width="1"/>
+
+        <line x1="32" y1="140" x2="390" y2="140" stroke="var(--c-mute)" stroke-width="1" stroke-dasharray="6 4" opacity=".5"/>
+        <text x="388" y="134" text-anchor="end" class="cl" fill="var(--c-mute)" font-size="10">high 1e uur</text>
+
+        <polyline data-phase="1" data-dur="680" data-cap="Expansie omhoog — dwars door de high van het 1e uur"
+          points="40,232 74,190 104,146 124,112 142,74"
+          stroke="var(--c-bull)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <g data-annot="1">
+          <circle cx="108" cy="140" r="3.6" fill="var(--c-bull)"/>
+          <circle cx="98" cy="120" r="9" fill="var(--c-bull)"/>
+          <text x="98" y="124" text-anchor="middle" class="cl" fill="#06231b" font-size="10" font-weight="700">1</text>
+          <text x="86" y="124" text-anchor="end" class="cl" fill="var(--c-bull)" font-size="10">sweep</text>
+        </g>
+
+        <polyline data-phase="2" data-dur="520" data-cap="Nog een hogere high — lokale structuur weggenomen. Dit punt wordt je SL."
+          points="142,74 162,90 186,49"
+          stroke="var(--c-bull)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <g data-annot="2">
+          <line x1="150" y1="90" x2="388" y2="90" stroke="var(--c-shift)" stroke-width="1" stroke-dasharray="4 3" opacity=".45"/>
+          <text x="386" y="80" text-anchor="end" class="cl" fill="var(--c-shift)" font-size="10" opacity=".85">wick low leg</text>
+          <circle cx="186" cy="49" r="4.2" fill="var(--c-bear)"/>
+          <circle cx="196" cy="36" r="9" fill="var(--c-bear)"/>
+          <text x="196" y="40" text-anchor="middle" class="cl" fill="#2b0710" font-size="10" font-weight="700">2</text>
+          <text x="209" y="40" class="cl" fill="var(--c-bear)" font-size="10" font-weight="600">hogere high = je SL</text>
+        </g>
+
+        <polyline data-phase="3" data-dur="860" data-cap="Body-close onder die wick low — dit is de type-3 shift"
+          points="186,49 208,122 230,170"
+          stroke="var(--c-shift)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <g data-annot="3">
+          <circle cx="230" cy="170" r="5.4" fill="var(--c-shift)" stroke="var(--c-bg)" stroke-width="2"/>
+          <circle cx="222" cy="192" r="9.5" fill="var(--c-shift)"/>
+          <text x="222" y="196" text-anchor="middle" class="cl" fill="#150a33" font-size="10" font-weight="700">3</text>
+          <text x="235" y="196" class="cl" fill="var(--c-shift)" font-size="11.5" font-weight="700">MSB ✓</text>
+        </g>
+
+        <polyline data-phase="4" data-dur="480" data-cap="De EERSTE pullback naar 50% van de MSB-beweging — hier open je de short"
+          points="230,170 250,110"
+          stroke="var(--c-entry)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <g data-annot="4">
+          <line x1="196" y1="110" x2="300" y2="110" stroke="var(--c-entry)" stroke-width="1" stroke-dasharray="4 3" opacity=".55"/>
+          <text x="192" y="114" text-anchor="end" class="cl" fill="var(--c-entry)" font-size="9.5" opacity=".9">50%</text>
+          <circle cx="250" cy="110" r="5.4" fill="var(--c-entry)" stroke="var(--c-bg)" stroke-width="2"/>
+          <circle cx="262" cy="96" r="9" fill="var(--c-entry)"/>
+          <text x="262" y="100" text-anchor="middle" class="cl" fill="#2e2000" font-size="10" font-weight="700">4</text>
+          <text x="275" y="100" class="cl" fill="var(--c-entry)" font-size="10" font-weight="600">entry 1e pullback</text>
+        </g>
+
+        <g data-annot="5">
+          <polyline points="250,110 296,168 350,202" stroke="var(--c-bear)" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 4" opacity=".55"/>
+          <circle cx="350" cy="202" r="4" fill="var(--c-bear)" opacity=".8"/>
+          <text x="344" y="220" text-anchor="end" class="cl" fill="var(--c-mute)" font-size="10">rebalance / 1,5R</text>
+        </g>
+      </svg>
+    </figure>
+
+    <div class="steps">
+      <div class="step" data-step="1">
+        <div class="sn" style="background:var(--bull)">1</div>
+        <div><strong>De expansie + sweep</strong> — bij een bearish bias loopt prijs eerst <em>omhoog</em>, 20+ minuten van je bias af, en neemt de high van het 1e sessie-uur mee. Een wick door dat niveau is genoeg. Dit is de beweging die je niet meehandelt; je wacht erop.</div>
+      </div>
+      <div class="step" data-step="2">
+        <div class="sn" style="background:var(--bear)">2</div>
+        <div><strong>Hogere high</strong> — de laatste leg omhoog neemt de lokale structuur weg. Markeer twee dingen: dit hoogste punt (dat wordt je <strong>stop loss</strong>) en de <strong>wick low van die leg</strong>.</div>
+      </div>
+      <div class="step" data-step="3">
+        <div class="sn" style="background:var(--shift)">3</div>
+        <div><strong>De shift (MSB)</strong> — prijs sluit met de <em>body</em> onder die wick low, dus terug in de richting van je 1H-bias. Hier moet het een close zijn; een wick alleen telt niet. Sluit hij niet door, dan is er geen setup.</div>
+      </div>
+      <div class="step" data-step="4">
+        <div class="sn" style="background:var(--entry)">4</div>
+        <div><strong>Entry op de eerste pullback</strong> — 50% van de MSB-beweging, op de <em>eerste</em> terugtrekking. Niet de tweede, niet de derde: loopt prijs weg zonder die 50% te raken, dan laat je hem gaan. SL op het extreme van de shift, TP op de rebalance of minimaal 1,5R.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ WICK: WANNEER WEL, WANNEER NIET ══════════ -->
+  <div class="section" id="wick">
+    <h2>Wick: wanneer telt hij wel?</h2>
+    <p class="desc">Dit is het detail waar je het snelst de mist in gaat, want de regel is
+       niet overal hetzelfde.</p>
+
+    <figure class="chart" style="margin:0 0 18px">
+      <svg viewBox="0 0 440 250" fill="none" role="img" aria-label="Links: bij de sweep van de 1hr high is een wick door het niveau voldoende. Rechts: bij de shift moet de candle voorbij het niveau sluiten; een wick alleen telt niet.">
+        <!-- ── links: SWEEP ── -->
+        <text x="102" y="24" text-anchor="middle" class="cl" fill="var(--c-bull)" font-size="11" font-weight="700">SWEEP</text>
+        <text x="102" y="40" text-anchor="middle" class="cl" fill="var(--c-mute)" font-size="9.5">wick is genoeg</text>
+        <line x1="26" y1="96" x2="178" y2="96" stroke="var(--c-mute)" stroke-width="1.2" stroke-dasharray="5 3" opacity=".75"/>
+        <text x="28" y="88" class="cl" fill="var(--c-mute)" font-size="9">1hr high</text>
+        <line x1="102" y1="74" x2="102" y2="178" stroke="var(--c-bear)" stroke-width="1.8"/>
+        <rect x="92" y="110" width="20" height="56" fill="var(--c-bear)" rx="1.5"/>
+        <text x="102" y="202" text-anchor="middle" class="cl" fill="var(--c-bull)" font-size="12" font-weight="700">telt ✓</text>
+        <text x="102" y="222" text-anchor="middle" class="cl" fill="var(--c-mute)" font-size="9">de wick ís de liquidity grab —</text>
+        <text x="102" y="235" text-anchor="middle" class="cl" fill="var(--c-mute)" font-size="9">de close mag er weer onder liggen</text>
+
+        <line x1="208" y1="34" x2="208" y2="228" stroke="var(--c-grid)"/>
+
+        <!-- ── rechts: SHIFT, twee gevallen onder elkaar ── -->
+        <text x="330" y="24" text-anchor="middle" class="cl" fill="var(--c-shift)" font-size="11" font-weight="700">SHIFT</text>
+        <text x="330" y="40" text-anchor="middle" class="cl" fill="var(--c-mute)" font-size="9.5">close vereist</text>
+
+        <!-- geval 1: alleen een wick -->
+        <line x1="238" y1="92" x2="286" y2="92" stroke="var(--c-shift)" stroke-width="1.1" stroke-dasharray="5 3" opacity=".7"/>
+        <line x1="268" y1="56" x2="268" y2="112" stroke="var(--c-bear)" stroke-width="1.8"/>
+        <rect x="258" y="64" width="20" height="24" fill="var(--c-bear)" rx="1.5"/>
+        <text x="292" y="78" class="cl" fill="var(--c-bear)" font-size="11" font-weight="700">✗</text>
+        <text x="306" y="78" class="cl" fill="var(--c-mute)" font-size="9">wick erdoor,</text>
+        <text x="306" y="90" class="cl" fill="var(--c-mute)" font-size="9">body sluit erboven</text>
+
+        <!-- geval 2: close erdoorheen -->
+        <line x1="238" y1="168" x2="286" y2="168" stroke="var(--c-shift)" stroke-width="1.1" stroke-dasharray="5 3" opacity=".7"/>
+        <line x1="268" y1="130" x2="268" y2="206" stroke="var(--c-shift)" stroke-width="1.8"/>
+        <rect x="258" y="138" width="20" height="58" fill="var(--c-shift)" rx="1.5"/>
+        <text x="292" y="166" class="cl" fill="var(--c-shift)" font-size="11" font-weight="700">✓</text>
+        <text x="306" y="166" class="cl" fill="var(--c-mute)" font-size="9">close voorbij de wick</text>
+        <text x="306" y="178" class="cl" fill="var(--c-mute)" font-size="9">high/low van de leg</text>
+
+        <text x="330" y="228" text-anchor="middle" class="cl" fill="var(--c-mute)" font-size="9">de gestippelde lijn is het swingpunt</text>
+      </svg>
+    </figure>
+
+    <div class="callout">
+      <h3>Waarom het verschil er is</h3>
+      <p>De sweep en de shift doen twee verschillende dingen. Bij de <b>sweep</b> gaat het
+         erom dát de orders boven of onder dat niveau zijn opgehaald — en dat gebeurt op het
+         moment dat prijs er doorheen gaat. De wick ís de grab; of de candle er weer onder
+         sluit doet niet ter zake.</p>
+      <p>Bij de <b>shift</b> gaat het om iets anders: bewijs dat de richting is gedraaid.
+         Een wick betekent daar alleen dat het niveau even is aangeraakt en meteen is
+         teruggekocht — het tegenovergestelde van wat je wil zien. Daarom moet daar wél
+         een candle voorbij sluiten.</p>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ WAAROM TYPE 3 ══════════ -->
+  <div class="section" id="type3">
+    <h2>Waarom het "type 3" heet</h2>
+    <p class="desc">Een gewone break of structure is niet genoeg. Er moeten drie dingen
+       op volgorde gebeuren.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="sn" style="background:var(--bear)">1</div>
+        <div><strong>De leg</strong> — prijs loopt in één richting weg van je bias. Dit is de expansie waar je op wacht; de wick high of low van deze beweging wordt straks je referentie.</div>
+      </div>
+      <div class="step">
+        <div class="sn" style="background:var(--entry)">2</div>
+        <div><strong>Lokale structuur wordt weggenomen</strong> — vóór de MSB moet prijs eerst nog een lagere low maken (bij een bullish setup) of een hogere high (bij een bearish). Dit is de stap die de meeste mensen overslaan, en zonder deze stap is het géén type 3.</div>
+      </div>
+      <div class="step">
+        <div class="sn" style="background:var(--shift)">3</div>
+        <div><strong>De MSB</strong> — dán sluit een candle voorbij de wick high of low van die leg. Pas die derde stap maakt er een type-3 shift van.</div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:18px">
+      <h3>Wat de HTF-candle je vertelt</h3>
+      <p>In een bullish trend openen de hogere-timeframe candles vaak bearish, en vormen
+         zo de onderwick van wat uiteindelijk een bullish candle wordt. Precies die
+         onderwicks zijn de plekken waar je long wil. Dat is de reden dat je bij een
+         bullish bias op een beweging omlaag wacht in plaats van meteen te kopen: je
+         probeert in die wick te stappen, niet erboven.</p>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ GEEN TRADE ══════════ -->
+  <div class="section" id="geen">
+    <h2>Wanneer er geen trade is</h2>
+    <p class="desc">Zeven manieren waarop een setup afvalt. De eerste vier zijn nieuw in
+       fase 2 en vallen weg vóórdat je naar de 1-minuut kijkt.</p>
+
+    <div class="fails">
+      <div class="fail root">
+        <div class="fail-h"><span class="fail-code">N1</span><span class="fail-t">Bias niet overtuigend</span><span class="fail-cost q">poort 2</span></div>
+        <p>Je kijkt naar de 1H en je kunt de richting niet in één zin uitleggen zonder
+           "ik denk". Dan is er geen richting, en dus geen kant om op te handelen. Elke
+           setup die je daarna vindt is een gok met extra stappen.</p>
+        <div class="fail-fix"><b>Fix:</b> geen bias, geen sessie. Sluit de laptop en kom morgen terug.</div>
+      </div>
+
+      <div class="fail root">
+        <div class="fail-h"><span class="fail-code">N2</span><span class="fail-t">Goud en DXY lopen mee</span><span class="fail-cost q">poort 3</span></div>
+        <p>Op de hogere timeframe bewegen goud en de dollar dezelfde kant op. Dan klopt er
+           iets niet aan je beeld: normaal duwt de een de ander. Bij eenheid weet je niet
+           welke van de twee de waarheid vertelt.</p>
+        <div class="fail-fix"><b>Fix:</b> overslaan. De uitzondering voor een echte A+ setup bestaat, maar je gebruikt hem bijna nooit — anders is het geen uitzondering.</div>
+      </div>
+
+      <div class="fail root">
+        <div class="fail-h"><span class="fail-code">N3</span><span class="fail-t">Rebalance is al geweest</span><span class="fail-cost q">poort 4</span></div>
+        <p>Het midpoint waar je naartoe zou handelen is al geraakt. De onbalans die de
+           setup zou voeden bestaat niet meer, dus je zou instappen richting een target
+           dat de markt al heeft afgewerkt.</p>
+        <div class="fail-fix"><b>Fix:</b> kijk vóór het venster waar de rebalance ligt. Is die weg, dan is er die dag geen werk.</div>
+      </div>
+
+      <div class="fail root">
+        <div class="fail-h"><span class="fail-code">N4</span><span class="fail-t">Shift tegen de bias in</span><span class="fail-cost q">poort 7</span></div>
+        <p>Dit is de gevaarlijkste, want de chart ziet er perfect uit. Sweep, swing point,
+           harde body-close — alles staat er, alleen de verkeerde kant op. Dat is geen
+           omkering maar continuatie van de tegenbeweging, en precies de trade die je in
+           fase 1 keer op keer nam.</p>
+        <div class="fail-fix"><b>Fix:</b> de shift moet terug wijzen naar je 1H-bias. Wijst hij ervandaan, dan sla je hem over, hoe mooi hij ook is.</div>
+      </div>
+
+      <div class="fail">
+        <div class="fail-h"><span class="fail-code">N5</span><span class="fail-t">Choppy expansie</span><span class="fail-cost q">poort 5</span></div>
+        <p>De candles rond het niveau overlappen elkaar en lopen niet weg. Er is geen
+           eenzijdige beweging, dus geen onbalans en niets opgehaald.</p>
+        <div class="fail-fix"><b>Fix:</b> leg de vergelijking hierboven ernaast. Twijfel je of het schoon genoeg is, dan is het dat niet.</div>
+      </div>
+
+      <div class="fail">
+        <div class="fail-h"><span class="fail-code">N6</span><span class="fail-t">Wick in plaats van close</span><span class="fail-cost q">poort 7</span></div>
+        <p>Het swingpunt wordt met een wick geraakt maar de body sluit er weer aan de
+           andere kant. Dat is een test die is teruggekocht, niet een niveau dat is
+           overgenomen. Let op: dit geldt voor de <b>shift</b>. Bij de sweep van de 1hr
+           high of low is een wick juist wél genoeg.</p>
+        <div class="fail-fix"><b>Fix:</b> wacht de close af. Altijd.</div>
+      </div>
+
+      <div class="fail">
+        <div class="fail-h"><span class="fail-code">N7</span><span class="fail-t">Geen retrace, of te krappe RR</span><span class="fail-cost q">poort 8 · 9</span></div>
+        <p>De setup klopt maar prijs loopt weg zonder terug te komen op 50%, of de SL moet
+           zo ver achter het shift-extreme dat er geen 1,5R meer uit komt.</p>
+        <div class="fail-fix"><b>Fix:</b> laten lopen. Dit kost je ongeveer 30% van de setups en dat is ingecalculeerd, geen gemiste kans.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ GRADES ══════════ -->
+  <div class="section">
+    <h2>Wat is het waard?</h2>
+    <p class="desc">Acht criteria in de journal. Bias, DXY, expansie, sweep en shift zijn
+       kritisch — die bepalen of je überhaupt mag kijken.</p>
+    <div class="grades">
+      <div class="grade a">
+        <div class="g">A</div>
+        <div class="t">Alle acht ✓</div>
+        <div class="d">Bias, DXY, expansie, sweep, shift, entry op 50%, SL op het extreme en TP op 1,5R. Dit is de enige setup waar je vol op gaat.</div>
+      </div>
+      <div class="grade b">
+        <div class="g">B</div>
+        <div class="t">Kritieke vijf ✓</div>
+        <div class="d">De structuur klopt, maar entry, SL of target is niet ideaal. Mag — kleiner, of overslaan zonder spijt.</div>
+      </div>
+      <div class="grade c">
+        <div class="g">C</div>
+        <div class="t">Kritiek ✗ of ?</div>
+        <div class="d">Eén onbeantwoorde vraag bij de kritieke vijf. Niet nemen. Een "?" is een nee.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ SESSIEREGELS ══════════ -->
+  <div class="section">
+    <h2>Sessieregels</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="sn" style="background:var(--shift)">·</div>
+        <div><strong>Maximaal twee pogingen per sessie.</strong> Niet twee winsten of twee goede setups — twee pogingen. Daarna ben je klaar, ongeacht hoe het liep.</div>
+      </div>
+      <div class="step">
+        <div class="sn" style="background:var(--bull)">·</div>
+        <div><strong>Eén winst en je stopt.</strong> Ook als er een uur over is en de chart er prachtig uitziet. Dit is de regel die je vorige reeks had kunnen halveren.</div>
+      </div>
+      <div class="step">
+        <div class="sn" style="background:var(--entry)">·</div>
+        <div><strong>Je mist ongeveer 30% van de setups</strong> omdat er geen retrace komt om op in te stappen. Dat is geen fout in je uitvoering, dat is hoe het model werkt.</div>
+      </div>
+      <div class="step">
+        <div class="sn" style="background:var(--bear)">·</div>
+        <div><strong>Grote open FVG?</strong> Voorzichtig zijn. Als er nog een flinke onbalans openstaat die gerebalanced moet worden, kan prijs tegen de trend in bewegen om die op te halen. Liever geen trade dan tegen zo'n beweging in.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- ══════════ CHECKLIST ══════════ -->
+  <div class="section">
+    <div class="final">
+      <h2>Voor je op de knop drukt</h2>
+      <div class="chk"><div class="cb"></div><div>Kan ik mijn 1H-bias in één zin uitleggen, zonder "ik denk"?</div></div>
+      <div class="chk"><div class="cb"></div><div>Loopt de DXY de andere kant op?</div></div>
+      <div class="chk"><div class="cb"></div><div>Ligt mijn rebalance-target nog vóór me?</div></div>
+      <div class="chk"><div class="cb"></div><div>Was de expansie schoon, zonder overlappende candles?</div></div>
+      <div class="chk"><div class="cb"></div><div>Wijst de shift terug naar mijn bias — niet ervandaan?</div></div>
+      <div class="chk"><div class="cb"></div><div>Zit mijn entry op 50% en haalt de RR 1,5?</div></div>
+      <div class="chk"><div class="cb"></div><div>Is dit mijn eerste of tweede poging vandaag?</div></div>
+    </div>
+  </div>
+
+  <p class="foot">Geen bias = geen trade. En een shift tegen je bias in is geen shift.</p>
+</div>
+
+<script>
+(function(){
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  document.querySelectorAll('[data-anim]').forEach(function(fig){
+    var svg = fig.querySelector('svg');
+    if(!svg) return;
+
+    var phases = Array.prototype.slice.call(svg.querySelectorAll('[data-phase]'))
+      .sort(function(a,b){ return (+a.dataset.phase) - (+b.dataset.phase); });
+    var annots = Array.prototype.slice.call(svg.querySelectorAll('[data-annot]'));
+    if(!phases.length) return;
+
+    var scope = fig.closest('[data-pattern]') || fig.parentElement;
+    var steps = scope ? Array.prototype.slice.call(scope.querySelectorAll('[data-step]')) : [];
+
+    phases.forEach(function(p){
+      var len = 400;
+      try { len = p.getTotalLength() || 400; } catch(e){}
+      p.dataset.len = len;
+    });
+
+    // control bar
+    var bar = document.createElement('div');
+    bar.className = 'ctrl';
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    var cap = document.createElement('span');
+    cap.className = 'cap';
+    bar.appendChild(btn); bar.appendChild(cap);
+    fig.appendChild(bar);
+
+    var timers = [], playing = false;
+
+    function clear(){ timers.forEach(clearTimeout); timers = []; }
+
+    function rest(){
+      clear(); playing = false;
+      phases.forEach(function(p){
+        p.style.transition = 'none';
+        p.style.strokeDasharray = '';
+        p.style.strokeDashoffset = '';
+      });
+      annots.forEach(function(a){ a.style.transition='none'; a.style.opacity='1'; });
+      steps.forEach(function(s){ s.classList.remove('on'); });
+      cap.textContent = ''; cap.classList.remove('hot');
+      btn.textContent = reduce ? 'Toon volledig' : '▶  Speel af';
+    }
+
+    function play(){
+      if(reduce){ rest(); return; }
+      clear(); playing = true;
+      btn.textContent = '■  Stop';
+
+      phases.forEach(function(p){
+        p.style.transition = 'none';
+        p.style.strokeDasharray = p.dataset.len;
+        p.style.strokeDashoffset = p.dataset.len;
+      });
+      annots.forEach(function(a){ a.style.transition='none'; a.style.opacity='0'; });
+      steps.forEach(function(s){ s.classList.remove('on'); });
+      svg.getBoundingClientRect(); // reflow
+
+      var t = 240;
+      phases.forEach(function(p){
+        var dur = +p.dataset.dur || 550;
+        var n = p.dataset.phase;
+        var isShift = parseFloat(p.getAttribute('stroke-width')) >= 3;
+
+        timers.push(setTimeout(function(){
+          p.style.transition = 'stroke-dashoffset ' + dur + 'ms cubic-bezier(.42,0,.38,1)';
+          p.style.strokeDashoffset = '0';
+          steps.forEach(function(s){ s.classList.toggle('on', s.dataset.step === n); });
+          cap.textContent = p.dataset.cap || '';
+          cap.classList.toggle('hot', isShift);
+        }, t));
+        t += dur;
+
+        timers.push(setTimeout(function(){
+          annots.filter(function(a){ return a.dataset.annot === n; })
+                .forEach(function(a){
+                  a.style.transition = 'opacity 300ms ease';
+                  a.style.opacity = '1';
+                });
+        }, t - 90));
+        t += 240;
+      });
+
+      timers.push(setTimeout(function(){
+        playing = false;
+        btn.textContent = '↻  Opnieuw';
+        steps.forEach(function(s){ s.classList.remove('on'); });
+        cap.textContent = ''; cap.classList.remove('hot');
+      }, t));
+    }
+
+    btn.addEventListener('click', function(){ playing ? rest() : play(); });
+    rest();
+  });
+})();
+</script>
+
+<script>
+/* ── candle-replay engine ───────────────────────────────────────────────
+   Elke spec is een handgemaakte, leerboek-perfecte prijsreeks.
+   c = [open, high, low, close] per candle.                              */
+(function(){
+  var SPEC = {
+
+    bear: {
+      lvl:100, lvlLabel:'1hr high', swing:101.5, swingAt:10, swingLabel:'wick low leg', swingSide:'left', swingLabelAt:14,
+      c:[[85,86.6,84.6,86.4],[86.4,88.2,86.2,88],[88,89.8,87.8,89.6],[89.6,91.6,89.4,91.4],
+         [91.4,93.4,91.2,93.2],[93.2,95.2,93,95],[95,97,94.8,96.8],[96.8,98.8,96.6,98.6],
+         [98.6,100.6,98.4,100.4],[100.4,102,100.2,101.8],[101.8,102.4,101.5,102.2],
+         [102.2,104,102,103.8],[103.8,105,103.4,104.6],
+         [104.6,104.8,101.2,101.4],[101.4,101.6,98.6,98.8],[98.8,99,97.5,97.8],
+         [97.8,99.6,97.6,99.4],[99.4,101.4,99.2,101.25],[101.25,101.4,98.6,98.8],[98.8,99,96.4,96.6],[96.6,96.8,94.8,95]],
+      trade:{at:17,entry:101.25,sl:105.4,tp:95},
+      labels:{sl:'SL',entry:'entry',tp:'rebalance'},
+      ev:[{i:8,tag:'sweep',at:'h',pos:'up',dx:-30,t:'Prijs loopt door de 1hr high — de liquiditeit daarboven is opgehaald'},
+          {i:12,tag:'hogere high',at:'h',pos:'up',hold:1100,t:'Hogere high: lokale structuur weggenomen. Dit punt wordt je stop loss.'},
+          {i:14,tag:'MSB ✓',at:'l',pos:'dn',k:'shift',hold:1600,t:'Close onder de wick low van de leg — dit is de type-3 shift'},
+          {i:17,tag:'50%',at:'h',pos:'up',dy:-13,k:'entry',hold:1500,t:'EERSTE pullback naar 50% van de MSB-beweging — hier open je de short'},
+          {i:20,tag:'TP ✓',at:'l',pos:'dn',k:'tp',hold:1300,t:'Rebalance geraakt — 50% van de expansiebeweging'}]
+    },
+
+    bull: {
+      lvl:100, lvlLabel:'1hr low', swing:98.5, swingAt:10, swingLabel:'wick high leg', swingSide:'left', swingLabelAt:14, swingLabelDy:13,
+      c:[[115,115.4,113.4,113.6],[113.6,113.8,111.8,112],[112,112.2,110.2,110.4],
+         [110.4,110.6,108.4,108.6],[108.6,108.8,106.6,106.8],[106.8,107,104.8,105],
+         [105,105.2,103,103.2],[103.2,103.4,101.2,101.4],
+         [101.4,101.6,99.4,99.6],[99.6,99.8,98,98.2],[98.2,98.5,97.6,97.8],
+         [97.8,98,96,96.2],[96.2,96.6,95,95.4],
+         [95.4,98.8,95.2,98.6],[98.6,101.4,98.4,101.2],[101.2,102.5,101,102.2],
+         [102.2,102.4,100.4,100.6],[100.6,100.8,98.7,98.75],[98.75,101.4,98.6,101.2],[101.2,103.6,101,103.4],[103.4,105.2,103.2,105]],
+      trade:{at:17,entry:98.75,sl:94.6,tp:105},
+      labels:{sl:'SL',entry:'entry',tp:'rebalance'},
+      ev:[{i:8,tag:'sweep',at:'l',pos:'dn',dx:-30,t:'Prijs loopt door de 1hr low — de stops daaronder zijn opgehaald'},
+          {i:12,tag:'lagere low',at:'l',pos:'dn',hold:1100,t:'Lagere low: lokale structuur weggenomen. Dit punt wordt je stop loss.'},
+          {i:14,tag:'MSB ✓',at:'h',pos:'up',k:'shift',hold:1600,t:'Close boven de wick high van de leg — dit is de type-3 shift'},
+          {i:17,tag:'50%',at:'l',pos:'dn',dy:13,k:'entry',hold:1500,t:'EERSTE pullback naar 50% van de MSB-beweging — hier open je de long'},
+          {i:20,tag:'TP ✓',at:'h',pos:'up',k:'tp',hold:1300,t:'Rebalance geraakt — 50% van de expansiebeweging'}]
+    },
+
+    slfail: {
+      h:252, lvl:100, lvlLabel:'1hr high', swing:null,
+      c:[[99.55,99.70,99.50,99.68],[99.68,99.85,99.65,99.82],[99.82,100.02,99.78,99.98],
+         [99.98,100.30,99.95,100.05],[100.05,100.08,99.85,99.90],[99.90,100.00,99.82,99.86],
+         [99.86,100.28,99.84,99.95],[99.95,99.98,99.60,99.65],[99.65,99.70,99.40,99.45],
+         [99.45,99.50,99.18,99.22]],
+      trade:{at:4,entry:99.90,sl:100.25,tp:99.20,slHitAt:6},
+      labels:{sl:'SL 2,5p',entry:'short',tp:'TP gemist'},
+      ev:[{i:3,tag:'sweep 3p',at:'h',pos:'up',hold:1100,t:'Sweep: prijs gaat 3 points boven de vorige 1hr high'},
+          {i:4,tag:'short',at:'l',pos:'dn',k:'entry',hold:1300,t:'Short geplaatst — SL op 2,5 points, dus binnen het bereik van die sweep'},
+          {i:6,tag:'SL ✗',at:'h',pos:'up',k:'fail',hold:1800,t:'De tweede push komt niet eens boven de eerste sweep — en tikt je SL aan'},
+          {i:9,tag:'',at:'l',pos:'dn',k:'mute',hold:1500,t:'En daar lag je TP. Zelfde setup, andere stop.'}]
+    }
+  };
+
+  var COL = {sweep:'var(--c-mute)',shift:'var(--c-shift)',entry:'var(--c-entry)',
+             tp:'var(--c-bull)',fail:'var(--c-bear)',mute:'var(--c-mute)'};
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function build(host){
+    var s = SPEC[host.dataset.replay]; if(!s) return;
+    var W=480, H=s.h||318, PL=30, PR=92, PT=24, PB=(s.h?40:38);
+    var C=s.c, n=C.length, T=s.trade, i, v=[];
+    for(i=0;i<n;i++){ v.push(C[i][1],C[i][2]); }
+    v.push(s.lvl,T.sl,T.tp,T.entry); if(s.swing!=null) v.push(s.swing);
+    var lo=Math.min.apply(null,v), hi=Math.max.apply(null,v), pd=(hi-lo)*0.11;
+    lo-=pd; hi+=pd;
+    var pw=W-PL-PR, ph=H-PT-PB, RE=PL+pw;
+    var Y=function(p){ return +(PT+(hi-p)/(hi-lo)*ph).toFixed(2); };
+    var st=pw/n, X=function(k){ return +(PL+st*(k+0.5)).toFixed(2); };
+    var bw=Math.min(st*0.58,14), hw=bw/2;
+    var LX=RE+7, o=[];
+
+    // baseline + previous 1hr level
+    o.push('<line x1="'+PL+'" y1="'+(PT+ph)+'" x2="'+RE+'" y2="'+(PT+ph)+'" stroke="var(--c-grid)"/>');
+    o.push('<line x1="'+PL+'" y1="'+Y(s.lvl)+'" x2="'+(RE+3)+'" y2="'+Y(s.lvl)+'" stroke="var(--c-mute)" stroke-dasharray="6 4" opacity=".65"/>');
+    o.push('<text x="'+LX+'" y="'+(Y(s.lvl)+3.4)+'" class="cl" fill="var(--c-mute)" font-size="9.5">'+s.lvlLabel+'</text>');
+
+    // swing level (revealed with its event)
+    if(s.swing!=null){
+      var sx=X(s.swingAt)-hw;
+      var swTxt = (s.swingSide==='left')
+        ? '<text x="'+(X(s.swingLabelAt!=null?s.swingLabelAt:s.swingAt)+8)+'" y="'+(Y(s.swing)+(s.swingLabelDy!=null?s.swingLabelDy:-5))+'" class="cl" fill="var(--c-shift)" font-size="9.5" opacity=".9">'+s.swingLabel+'</text>'
+        : '<text x="'+LX+'" y="'+(Y(s.swing)+3.4)+'" class="cl" fill="var(--c-shift)" font-size="9.5" opacity=".9">'+s.swingLabel+'</text>';
+      o.push('<g class="sw"><line x1="'+sx+'" y1="'+Y(s.swing)+'" x2="'+(RE+3)+'" y2="'+Y(s.swing)+
+             '" stroke="var(--c-shift)" stroke-dasharray="4 3" opacity=".6"/>'+swTxt+'</g>');
+    }
+
+    // trade overlay
+    var ey=Y(T.entry), ys=Y(T.sl), yt=Y(T.tp), tx=X(T.at)-hw;
+    o.push('<g class="tr">'+
+      '<rect x="'+tx+'" y="'+Math.min(ey,ys)+'" width="'+(RE-tx)+'" height="'+Math.abs(ys-ey).toFixed(2)+'" fill="var(--c-bear)" opacity=".12"/>'+
+      '<rect x="'+tx+'" y="'+Math.min(ey,yt)+'" width="'+(RE-tx)+'" height="'+Math.abs(yt-ey).toFixed(2)+'" fill="var(--c-bull)" opacity=".11"/>'+
+      '<line x1="'+tx+'" y1="'+yt+'" x2="'+(RE+3)+'" y2="'+yt+'" stroke="var(--c-bull)" stroke-width="1.2"/>'+
+      '<line x1="'+tx+'" y1="'+ey+'" x2="'+(RE+3)+'" y2="'+ey+'" stroke="var(--c-entry)" stroke-width="1.4" stroke-dasharray="5 3"/>'+
+      '<g class="slline"><line x1="'+tx+'" y1="'+ys+'" x2="'+(RE+3)+'" y2="'+ys+'" stroke="var(--c-bear)" stroke-width="1.4"/></g>'+
+      '<text x="'+LX+'" y="'+(ys+3.4)+'" class="cl" fill="var(--c-bear)" font-size="9.5" font-weight="700">'+T.slLbl+'</text>'+
+      '<text x="'+LX+'" y="'+(ey+3.4)+'" class="cl" fill="var(--c-entry)" font-size="9.5" font-weight="700">'+T.enLbl+'</text>'+
+      '<text x="'+LX+'" y="'+(yt+3.4)+'" class="cl" fill="'+(T.slHitAt!=null?'var(--c-mute)':'var(--c-bull)')+'" font-size="9.5" font-weight="700">'+T.tpLbl+'</text>'+
+      '</g>');
+
+    // candles
+    for(i=0;i<n;i++){
+      var k=C[i], up=k[3]>=k[0], col=up?'var(--c-bull)':'var(--c-bear)';
+      var ghost = (T.slHitAt!=null && i>T.slHitAt) ? 0.32 : 1;
+      var bt=Y(Math.max(k[0],k[3])), bb=Y(Math.min(k[0],k[3]));
+      o.push('<g class="cd" data-i="'+i+'" data-op="'+ghost+'" style="opacity:'+ghost+'">'+
+        '<line x1="'+X(i)+'" y1="'+Y(k[1])+'" x2="'+X(i)+'" y2="'+Y(k[2])+'" stroke="'+col+'" stroke-width="1.3"/>'+
+        '<rect x="'+(X(i)-hw)+'" y="'+bt+'" width="'+bw+'" height="'+Math.max(bb-bt,1.4).toFixed(2)+'" fill="'+col+'" rx="1"/></g>');
+    }
+
+    // event tags
+    for(i=0;i<s.ev.length;i++){
+      var e=s.ev[i], c=COL[e.k||'sweep'];
+      var px=X(e.i), py=Y(e.at==='h'?C[e.i][1]:C[e.i][2]);
+      var ty=(e.pos==='up'?py-13:py+17)+(e.dy||0);
+      var lx=Math.min(Math.max(px+(e.dx||0),PL+26),RE-16);
+      o.push('<g class="ev" data-i="'+e.i+'"><circle cx="'+px+'" cy="'+py+'" r="3.2" fill="'+c+'"/>'+
+             (e.tag?'<text x="'+lx+'" y="'+ty+'" text-anchor="middle" class="cl" fill="'+c+'" font-size="9.5" font-weight="700">'+e.tag+'</text>':'')+'</g>');
+    }
+
+    host.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" fill="none" role="img" aria-label="'+
+      (host.dataset.alt||'Candle-replay van een CBR-setup')+'">'+o.join('')+'</svg>'+
+      '<div class="ctrl"><button type="button"></button><span class="cap"></span></div>';
+
+    return wire(host, s);
+  }
+
+  function wire(host, s){
+    var svg=host.querySelector('svg'), btn=host.querySelector('button'), cap=host.querySelector('.cap');
+    var cds=[].slice.call(host.querySelectorAll('.cd'));
+    var evs=[].slice.call(host.querySelectorAll('.ev'));
+    var sw=host.querySelector('.sw'), tr=host.querySelector('.tr');
+    var slg=host.querySelector('.slline');
+    var timers=[], playing=false;
+    function clr(){ timers.forEach(clearTimeout); timers=[]; }
+
+    function rest(){
+      clr(); playing=false;
+      cds.forEach(function(g){ g.style.opacity=g.dataset.op; });
+      evs.forEach(function(g){ g.style.opacity=1; });
+      if(sw) sw.style.opacity=1;
+      if(tr) tr.style.opacity=1;
+      if(slg) slg.classList.remove('slhit');
+      cap.textContent=''; cap.classList.remove('hot');
+      btn.textContent = reduce ? 'Toon volledig' : '▶  Speel de trade af';
+    }
+
+    function play(){
+      if(reduce){ rest(); return; }
+      clr(); playing=true; btn.textContent='■  Stop';
+      cds.forEach(function(g){ g.style.opacity=0; });
+      evs.forEach(function(g){ g.style.opacity=0; });
+      if(sw) sw.style.opacity=0;
+      if(tr) tr.style.opacity=0;
+      if(slg) slg.classList.remove('slhit');
+      svg.getBoundingClientRect();
+
+      var t=260, T=s.trade, byI={};
+      s.ev.forEach(function(e){ byI[e.i]=e; });
+
+      cds.forEach(function(g,i){
+        timers.push(setTimeout(function(){
+          g.style.opacity=g.dataset.op;
+          if(s.swing!=null && i===s.swingAt && sw) sw.style.opacity=1;
+          if(i===T.at && tr) tr.style.opacity=1;
+          if(T.slHitAt!=null && i===T.slHitAt && slg){
+            slg.classList.remove('slhit'); void slg.getBBox(); slg.classList.add('slhit');
+          }
+          var e=byI[i];
+          if(e){
+            evs[s.ev.indexOf(e)].style.opacity=1;
+            cap.textContent=e.t;
+            cap.classList.toggle('hot', e.k==='shift'||e.k==='fail');
+          }
+        }, t));
+        t += 150 + (byI[i] ? (byI[i].hold||800) : 0);
+      });
+
+      timers.push(setTimeout(function(){
+        playing=false; btn.textContent='↻  Opnieuw';
+        cap.textContent=''; cap.classList.remove('hot');
+      }, t+400));
+    }
+
+    btn.addEventListener('click', function(){ playing?rest():play(); });
+    rest();
+  }
+
+  // short label aliases so the markup above stays readable
+  Object.keys(SPEC).forEach(function(k){
+    var s=SPEC[k];
+    s.trade.slLbl=s.labels.sl; s.trade.enLbl=s.labels.entry; s.trade.tpLbl=s.labels.tp;
+  });
+
+  [].slice.call(document.querySelectorAll('[data-replay]')).forEach(build);
+})();
+</script>
+
+</body>
+</html>

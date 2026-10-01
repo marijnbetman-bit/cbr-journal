@@ -1,0 +1,104 @@
+// Weekreview — automatische samenvatting plus je eigen drie vragen.
+
+let anker = qs("datum") || todayISO();
+
+async function boot() {
+  document.getElementById("vorigeWeek").addEventListener("click", () => schuif(-7));
+  document.getElementById("volgendeWeek").addEventListener("click", () => schuif(7));
+  document.getElementById("saveReview").addEventListener("click", opslaan);
+  await load();
+}
+
+function schuif(dagen) {
+  const d = new Date(anker + "T12:00:00");
+  d.setDate(d.getDate() + dagen);
+  anker = d.toISOString().slice(0, 10);
+  history.replaceState(null, "", "/week?datum=" + anker);
+  load();
+}
+
+function dagKort(iso) {
+  const d = new Date(iso + "T12:00:00");
+  return d.toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
+}
+
+let W = null;
+
+async function load() {
+  W = await api("/api/week/" + anker);
+  document.getElementById("weekTitel").textContent =
+    `${dagKort(W.maandag)} t/m ${dagKort(W.zondag)}`;
+
+  const v = W.vorige;
+  const deltaNetto = W.netto - v.netto;
+  document.getElementById("weekKpi").innerHTML = `
+    <div class="stat"><div class="num">${W.n_trades}</div><div class="cap">Trades</div></div>
+    <div class="stat"><div class="num ${eurClass(W.netto)}">${fmtEur(W.netto)}</div>
+      <div class="cap">Netto${v.n_trades ? ` (${deltaNetto >= 0 ? "+" : ""}${deltaNetto.toFixed(2)} vs vorige)` : ""}</div></div>
+    <div class="stat"><div class="num">${W.valide_pct}%</div><div class="cap">Valide setups</div></div>
+    <div class="stat"><div class="num pos">${W.grade_dist.A || 0}</div><div class="cap">Perfect (A)</div></div>
+    <div class="stat"><div class="num">${W.n_overgeslagen}</div><div class="cap">Overgeslagen</div></div>
+    <div class="stat"><div class="num">${W.n_no_trades}</div><div class="cap">No-trades</div></div>`;
+
+  const vf = document.getElementById("vorigeFocus");
+  const af = W.vorige_focus_af === "ja";
+  vf.innerHTML = W.vorige_focus
+    ? `<div class="focus-banner ${af ? "af" : ""}"><span class="ic">${af ? "✓" : "🎯"}</span>
+         <div><b>Je focus van vorige week:</b> ${W.vorige_focus}<br>
+         <span style="color:var(--muted);font-size:13px">${af
+           ? "Afgevinkt. Mooi — kies hieronder je focus voor de week die komt."
+           : "Is dat gelukt? Vink 'm af, dan verdwijnt hij van je dagoverzicht."}</span></div>
+         <div class="spacer" style="flex:1"></div>
+         <button class="btn" id="focusAfKnop">${af ? "Toch nog niet" : "Afvinken"}</button>
+       </div>` : "";
+  const kn = document.getElementById("focusAfKnop");
+  if (kn) kn.addEventListener("click", async () => {
+    const vorigeMa = new Date(W.maandag); vorigeMa.setDate(vorigeMa.getDate() - 7);
+    const sleutel = vorigeMa.toISOString().slice(0, 10);
+    try {
+      await api(`/api/review/week/${sleutel}/focus_af`,
+        { method: "PUT", body: JSON.stringify({ af: !af }) });
+      load();
+    } catch (e) { toast("Opslaan mislukt: " + e.message, true); }
+  });
+
+  const ul = document.getElementById("hoogtepunten");
+  if (!W.n_trades) {
+    ul.innerHTML = `<li style="color:var(--muted)">Geen trades deze week.</li>`;
+  } else {
+    const extra = [];
+    extra.push(`Expectancy ${W.expectancy_r >= 0 ? "+" : ""}${W.expectancy_r.toFixed(2)}R bij ${W.winrate}% winrate.`);
+    if (W.foutcodes.length) {
+      const f = W.foutcodes[0];
+      extra.push(`Vaakste fout: ${f.code} — ${f.omschrijving} (${f.aantal}×). Regel: ${f.correctie}`);
+    }
+    if (W.beste_a) {
+      const b = W.beste_a;
+      extra.push(`Beste setup van de week: ${b.datum} ${b.richting || ""} — grade A, ${
+        b.netto >= 0 ? "+" : ""}${b.netto.toFixed(2)} euro${b.rr ? ` bij RR ${b.rr}` : ""}.${
+        b.les ? ` Jouw les: "${b.les}"` : " Blader 'm nog eens door in je setup-bibliotheek."}`);
+    }
+    if (W.terugkerend && W.terugkerend.kostend.length) {
+      extra.push(W.terugkerend.kostend[0].oordeel);
+    }
+    ul.innerHTML = [...W.hoogtepunten, ...extra].map((h) => `<li>${h}</li>`).join("");
+  }
+
+  document.getElementById("goed").value = W.review.goed || "";
+  document.getElementById("beter").value = W.review.beter || "";
+  document.getElementById("focus").value = W.review.focus || "";
+}
+
+async function opslaan() {
+  const body = JSON.stringify({
+    goed: document.getElementById("goed").value,
+    beter: document.getElementById("beter").value,
+    focus: document.getElementById("focus").value,
+  });
+  try {
+    await api(`/api/review/week/${W.maandag}`, { method: "PUT", body });
+    toast("Weekreview opgeslagen");
+  } catch (e) { toast("Opslaan mislukt: " + e.message, true); }
+}
+
+boot();

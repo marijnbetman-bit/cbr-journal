@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kalender — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="topbar">
+    <span class="mono" style="color:var(--muted);font-size:13px;">
+      <span class="blink-dot">●</span> kalender
+    </span>
+    <div class="spacer"></div>
+    <div class="period-tabs" id="bronTabs">
+      <button data-b="live" class="on">Live</button>
+      <button data-b="backtest">Backtest</button>
+      <button data-b="alles">Alles</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="kal-head">
+      <button class="btn btn-ghost" id="prevMaand">‹</button>
+      <h2 id="maandTitel">—</h2>
+      <button class="btn btn-ghost" id="nextMaand">›</button>
+      <button class="btn" id="naarVandaag">Vandaag</button>
+      <div class="spacer" style="flex:1"></div>
+      <div class="kal-legenda">
+        <span class="lg"><i class="sw sw-neg"></i> verlies</span>
+        <span class="lg"><i class="sw sw-nul"></i> vlak</span>
+        <span class="lg"><i class="sw sw-pos"></i> winst</span>
+        <span class="lg">★ perfecte setup</span>
+        <span class="lg">🛡 overgeslagen</span>
+      </div>
+    </div>
+
+    <div class="mt-bar" id="maandBar"></div>
+
+    <div class="kal-panel">
+      <div class="kal-dagnamen" id="dagNamen"></div>
+      <div class="kal-grid" id="kalGrid"></div>
+    </div>
+
+    <div class="section-title">Het jaar in één strook</div>
+    <div class="chart-panel">
+      <p class="hint">Netto R per maand. Klik een maand om er naartoe te springen.</p>
+      <div class="jaarstrook" id="jaarstrook"></div>
+    </div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/kalender.js"></script>
+</body>
+</html>

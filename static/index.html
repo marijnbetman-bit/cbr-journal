@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/home2.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+
+  <div class="container home2">
+
+    <!-- 1. SALDO -->
+    <section class="h2-hero panel">
+      <div class="h2-hero-kop">
+        <div>
+          <div class="h2-label">Saldo <span id="mt5Chip" class="h2-mt5"></span></div>
+          <div class="h2-saldo" id="heroSaldo">–</div>
+          <div class="h2-sub" id="heroSub"></div>
+        </div>
+        <div class="h2-hero-rechts">
+          <div class="h2-tabs" id="curveTabs">
+            <button data-m="saldo" class="on">Saldo</button>
+            <button data-m="trading">Alleen trading</button>
+            <button data-m="r">In R</button>
+          </div>
+          <button class="btn" id="saldoKnop" type="button">⚙ Saldo &amp; stortingen</button>
+        </div>
+      </div>
+      <div class="h2-curve"><canvas id="cCurve"></canvas></div>
+      <div class="h2-dd-kop"><span>Drawdown (alleen trading)</span><span id="ddTekst"></span></div>
+      <div class="h2-dd"><canvas id="cDD"></canvas></div>
+    </section>
+
+    <div id="kpiBar"></div>
+
+    <!-- 2. NOG TE LOGGEN -->
+    <section id="te-loggen"></section>
+
+    <!-- 3. NU -->
+    <div class="section-title">Hoe gaat het nu</div>
+    <div class="h2-grid3">
+      <div class="panel period-panel" id="dagPanel"></div>
+      <div class="panel period-panel" id="weekPanel"></div>
+      <div class="panel period-panel" id="maandPanel"></div>
+    </div>
+
+    <!-- 3b. PROGRESSIE PER WEEK -->
+    <div class="section-title">Progressie per week <a class="hint" href="/week" style="text-transform:none;letter-spacing:0;margin-left:8px">weekrapport + PDF →</a></div>
+    <div class="h2-prog4">
+      <div class="panel chart-panel"><h3>Resultaat (R)</h3><div class="wk2-mini"><canvas id="wR"></canvas></div></div>
+      <div class="panel chart-panel"><h3>Proces-score</h3><div class="wk2-mini"><canvas id="wProces"></canvas></div></div>
+      <div class="panel chart-panel"><h3>Winrate</h3><div class="wk2-mini"><canvas id="wWin"></canvas></div></div>
+      <div class="panel chart-panel"><h3>Regels gevolgd</h3><div class="wk2-mini"><canvas id="wSchoon"></canvas></div></div>
+    </div>
+
+    <!-- 4. WANNEER -->
+    <div class="section-title" id="prestaties">Wanneer trade je het best</div>
+    <div class="h2-grid2">
+      <div class="panel chart-panel"><h3>Resultaat per uur</h3>
+        <p class="hint">Netto € per uur van instap (NL-tijd). Gearceerd = je venster. Hover voor winrate en R.</p>
+        <div class="h2-chart"><canvas id="cUur"></canvas></div></div>
+      <div class="panel chart-panel"><h3>Per sessie</h3>
+        <p class="hint">Gemiddelde R per trade per marktsessie.</p>
+        <div class="h2-chart"><canvas id="cSessie"></canvas></div>
+        <div id="sessieTabel"></div></div>
+    </div>
+    <div class="panel chart-panel"><h3>Weekdag × uur</h3>
+      <p class="hint">Gemiddelde R per vakje. Groen = verdient, rood = kost. Getal = aantal trades.</p>
+      <div id="heatmap"></div></div>
+
+    <!-- 5. HOE -->
+    <div class="section-title">Hoe trade je</div>
+    <div class="h2-grid2">
+      <div class="panel chart-panel"><h3>Verdeling van je R</h3>
+        <p class="hint">Hoe vaak landt een trade waar. Een gezonde 1:1-trader heeft pieken op −1R en +1R.</p>
+        <div class="h2-chart"><canvas id="cRdist"></canvas></div></div>
+      <div class="panel chart-panel"><h3>Hoe ver ging hij mee en tegen (MFE / MAE)</h3>
+        <p class="hint">Rechts = liep ver in je voordeel. Hoog = ging ver tegen je. Winnaars groen, verliezers rood.</p>
+        <div class="h2-chart"><canvas id="cMfe"></canvas></div></div>
+      <div class="panel chart-panel"><h3>Rollende expectancy (laatste 10)</h3>
+        <p class="hint">Word je beter? Boven de nullijn = je laatste 10 trades verdienen gemiddeld.</p>
+        <div class="h2-chart"><canvas id="cRol"></canvas></div></div>
+      <div class="panel chart-panel"><h3>Duur tegen resultaat</h3>
+        <p class="hint">Minuten in de trade tegen de R die je pakte.</p>
+        <div class="h2-chart"><canvas id="cDuur"></canvas></div></div>
+    </div>
+
+    <!-- 6. PROCES -->
+    <div class="section-title">Proces boven uitkomst</div>
+    <div class="h2-grid3" id="procesBlok"></div>
+
+    <!-- 7. COACH -->
+    <div id="rliggenBlok"></div>
+    <div id="foutenBlok"></div>
+
+    <!-- 8. KALENDER + MAANDEN -->
+    <div class="section-title">Kalender</div>
+    <div class="h2-grid2">
+      <div class="panel" id="kalender"></div>
+      <div class="panel" id="maandTabel"></div>
+    </div>
+
+    <!-- 9. TRADES -->
+    <div class="section-title">Recente trades</div>
+    <div id="recentBlok"></div>
+
+    <p class="home-voet hint" id="homeVoet"></p>
+  </div>
+
+  <!-- saldo-venster -->
+  <div class="h2-modal" id="saldoModal" hidden>
+    <div class="h2-modal-doos panel">
+      <div class="h2-modal-kop"><h3>Saldo &amp; stortingen</h3>
+        <button class="btn btn-ghost" id="saldoDicht" type="button">✕</button></div>
+      <div id="saldoInhoud"></div>
+    </div>
+  </div>
+
+  <script src="/static/vendor/chart.umd.min.js"></script>
+  <script src="/static/common.js"></script>
+  <script src="/static/homepage.js"></script>
+</body>
+</html>

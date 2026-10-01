@@ -1,0 +1,209 @@
+/* =====================================================================
+   DONKER THEMA — "zwoel, subtiel" (1 okt 2026)
+   Ligt als laag BOVEN style.css/home2.css; de rest van de stijl blijft staan.
+   Terugdraaien = de <link> naar dit bestand uit de pagina's halen.
+
+   Palet = TradingView: wit, zwart, blauw (#2962ff) en groen (#089981).
+   Rood blijft alleen voor verlies (TradingView-rood), geen decoratie.
+   Ondergrond: inktzwart met een vleugje blauw, hairline randen, een
+   zachte blauwe en groene gloed in de hoeken. Geen harde contrasten.
+   ===================================================================== */
+@media screen {
+
+:root {
+  color-scheme: dark;
+
+  /* ondergronden: van inkt naar licht opgetild */
+  --bg: #080b11;
+  --bg-alt: #0c1017;
+  --panel: #10151e;
+  --panel-2: #151b26;
+  --panel-3: #1c2431;
+  --border: #212a3a;
+  --border-soft: #182030;
+
+  /* tekst: gebroken wit, nooit schreeuwend */
+  --text: #e8ebf2;
+  --text-dim: #b1b9c8;
+  --muted: #7b869a;
+
+  /* tekst-tinten op donker (helderder dan de vlak-tinten hieronder) */
+  --green: #2fcaa7;
+  --blue: #6c9dff;
+  --red: #ff6a78;
+  --amber: #e5ae4b;
+  --gold: #e5ae4b;
+  --plum: #6c9dff;                 /* geen paars meer: accent = blauw */
+
+  /* vlak- en grafiektinten = TradingView zelf */
+  --c-green: #089981;
+  --c-teal: #2962ff;
+  --c-red: #f23645;
+  --c-gold: #f2900d;
+  --c-plum: #4c7dff;
+
+  --radius: 9px;
+  --radius-s: 7px;
+  --shadow: 0 10px 34px rgba(0, 0, 0, .42);
+  --shadow-s: none;
+  --op-accent: #ffffff;
+
+  --glans: inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+html { background: var(--bg); }
+body {
+  background:
+    radial-gradient(1100px 620px at 8% -12%, rgba(41, 98, 255, .13), transparent 62%),
+    radial-gradient(900px 520px at 104% 2%, rgba(8, 153, 129, .09), transparent 58%),
+    radial-gradient(700px 420px at 50% 112%, rgba(41, 98, 255, .06), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--text);
+}
+::selection { background: rgba(41, 98, 255, .45); color: #fff; }
+
+/* ---------- balken bovenaan ---------- */
+.topbar, .lagen-balk {
+  background: color-mix(in srgb, var(--bg) 78%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(1.2) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+#hoofdnav { background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(14px); }
+.nav-menu { background: var(--panel); box-shadow: 0 18px 50px rgba(0, 0, 0, .6), var(--glans); border-color: var(--border); }
+.nav-knop:hover, .nav-groep.open .nav-knop, .nav-item:hover { background: var(--panel-2); }
+.nav-knop.aan, .nav-item.aan { background: rgba(41, 98, 255, .14); color: var(--blue); }
+.nav-item kbd, .nav-palet kbd { background: var(--bg-alt); }
+.nav-mt5 .tel { background: var(--c-teal); }
+.nav-mt5:focus-visible { outline-color: var(--c-teal); }
+.nav-mt5 .stip { background: #566074; }
+.nav-mt5.aan .stip { background: var(--c-green); box-shadow: 0 0 10px rgba(8, 153, 129, .7); }
+
+/* ---------- vlakken ---------- */
+.panel, .chart-panel, .card, .log-trade, .bib-setup, .notitie, .kal-panel, .data-bar,
+.reward, .map, .h2-hero, .sg-kaart {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, #fff 3%), var(--panel));
+  border-color: var(--border);
+  box-shadow: var(--glans), 0 8px 26px rgba(0, 0, 0, .28);
+}
+.card:hover, .notitie:hover, .map:hover { border-color: rgba(41, 98, 255, .55); }
+.h2-hero {
+  background:
+    radial-gradient(700px 260px at 100% 0%, rgba(41, 98, 255, .12), transparent 70%),
+    radial-gradient(500px 240px at 0% 100%, rgba(8, 153, 129, .08), transparent 70%),
+    var(--panel);
+}
+.h2-saldo { text-shadow: 0 0 38px rgba(41, 98, 255, .28); }
+.h2-tabs { background: var(--bg-alt); }
+.h2-tabs button.on { background: var(--panel-3); color: var(--text); box-shadow: var(--glans); }
+
+.stat, .mt-cell, .reward-stat, .streak, .inst-rij, .badge, .spraak-knop {
+  background: var(--panel) !important;
+}
+.mt-bar, .summary, .reward-grid, .streaks { background: var(--border); border-color: var(--border); }
+.mt-cell.accent { background: linear-gradient(180deg, rgba(41, 98, 255, .10), var(--panel)) !important; box-shadow: inset 0 2px 0 var(--c-teal); }
+.streak.hot { background: color-mix(in srgb, var(--c-green) 12%, var(--panel)) !important; }
+.badge.on { background: color-mix(in srgb, var(--c-green) 14%, var(--panel)) !important; border-color: color-mix(in srgb, var(--c-green) 45%, transparent); }
+.empty { background: var(--panel); border-color: var(--border); }
+.empty.wachtend { background: var(--panel-2); }
+
+/* ---------- tabellen ---------- */
+table.mt th { background: var(--panel-2); }
+table.mt tbody tr:nth-child(even) { background: rgba(255, 255, 255, .018); }
+table.mt tbody tr:hover { background: rgba(41, 98, 255, .09); }
+table.mt th, table.mt td { border-color: var(--border-soft); }
+
+/* ---------- knoppen en velden ---------- */
+.btn { background: var(--panel-2); border-color: var(--border); color: var(--text-dim); }
+.btn:hover { background: var(--panel-3); border-color: rgba(41, 98, 255, .6); color: var(--text); }
+.btn-ghost { background: transparent; }
+.btn-ghost:hover { background: var(--panel-2); }
+.btn-primary {
+  background: linear-gradient(180deg, #3a73ff, var(--c-teal));
+  border-color: #3a73ff; color: #fff;
+  box-shadow: 0 6px 20px rgba(41, 98, 255, .32);
+}
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-danger { background: transparent; }
+input, textarea, select {
+  background: var(--bg-alt) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: .8; }
+input:focus, textarea:focus, select:focus {
+  border-color: var(--c-teal) !important;
+  box-shadow: 0 0 0 3px rgba(41, 98, 255, .22);
+}
+select option { background: var(--panel); color: var(--text); }
+input[type="checkbox"], input[type="radio"], .sim-slider { accent-color: var(--c-teal); }
+
+.period-tabs, .lagen, .seg { background: var(--bg-alt); }
+.period-tabs button.on, .seg-sm button.on, .zeker button.on, .snel-trio button.on, #bron button.on {
+  background: var(--c-teal); border-color: var(--c-teal); color: #fff;
+}
+.lagen button.on { color: var(--blue); border-bottom-color: var(--c-teal); }
+.lagen button:hover { background: var(--panel-2); }
+.chip { background: var(--panel-2); border-color: var(--border); color: var(--text-dim); }
+.chip.emotie.goed.on { background: color-mix(in srgb, var(--c-green) 20%, transparent); }
+.chip.emotie.let-op.on { background: color-mix(in srgb, var(--c-gold) 20%, transparent); }
+.chip.tag-sug.on { background: color-mix(in srgb, var(--c-teal) 22%, transparent); }
+.tag { background: var(--panel-2); border-color: var(--border); }
+.pill.grade-A, .grade-A { background: color-mix(in srgb, var(--c-green) 18%, transparent); border-color: color-mix(in srgb, var(--c-green) 55%, transparent); }
+.pill.grade-B, .grade-B { background: color-mix(in srgb, var(--c-teal) 20%, transparent); border-color: color-mix(in srgb, var(--c-teal) 55%, transparent); }
+.pill.grade-C, .grade-C { background: color-mix(in srgb, var(--c-red) 16%, transparent); border-color: color-mix(in srgb, var(--c-red) 50%, transparent); }
+
+/* ---------- kalender ---------- */
+.kal-dag.w1 { background: color-mix(in srgb, var(--c-green) 14%, var(--panel)); }
+.kal-dag.w2 { background: color-mix(in srgb, var(--c-green) 28%, var(--panel)); }
+.kal-dag.w3 { background: color-mix(in srgb, var(--c-green) 44%, var(--panel)); }
+.kal-dag.l1 { background: color-mix(in srgb, var(--c-red) 14%, var(--panel)); }
+.kal-dag.l2 { background: color-mix(in srgb, var(--c-red) 28%, var(--panel)); }
+.kal-dag.l3 { background: color-mix(in srgb, var(--c-red) 44%, var(--panel)); }
+.kal-dag.leeg, .kal-dag.weekend { background: var(--bg-alt); }
+
+/* ---------- lightbox, palet, toast ---------- */
+.lightbox { background: rgba(4, 6, 10, .92); }
+.lb-sluit { background: var(--panel-2); color: var(--text); border-color: var(--border); }
+.cmdk { background: rgba(2, 4, 8, .62); }
+.cmdk-doos { background: var(--panel); box-shadow: 0 30px 80px rgba(0, 0, 0, .7), var(--glans); border: 1px solid var(--border); }
+.cmdk-rij.op { background: rgba(41, 98, 255, .16); }
+.cmdk-voet { background: var(--bg-alt); }
+.toast { background: var(--panel-3); color: var(--text); border-color: var(--border); box-shadow: 0 12px 34px rgba(0, 0, 0, .5); }
+.thumb-badge, .shot-weg { background: rgba(0, 0, 0, .65); }
+
+/* ---------- scrollbars ---------- */
+* { scrollbar-color: #2a3447 transparent; }
+::-webkit-scrollbar-thumb { background: #2a3447; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: #3a465d; background-clip: content-box; }
+
+/* ---------- charts uit MetaTrader/signalen (SVG) ----------
+   De SVG's zijn wit met blauwe en zwarte candles (jouw TradingView). In het
+   donker draaien we ze om: wit -> inkt, zwart -> licht, blauw blijft blauw. */
+img[src$=".svg"], img[src*=".svg?"], img[src*="/chart.svg"] {
+  filter: invert(.93) hue-rotate(180deg) saturate(1.2) brightness(.96);
+  background: #fff;
+  border-radius: var(--radius-s);
+}
+.map-beeld[style*=".svg"] { border-color: #dfe3ea !important; filter: invert(.93) hue-rotate(180deg) saturate(1.2) brightness(.96); }
+.sg-chart, .h2-log-chart, .shot, .bib-chart { background: #0d1118 !important; }
+.h2-log-chart img, .wk2-chart img { border-radius: var(--radius-s); }
+/* screenshots die je zelf uploadt (PNG/JPG) blijven zoals ze zijn */
+
+/* ---------- homepage-details ---------- */
+.h2-teller { box-shadow: 0 0 12px rgba(242, 54, 69, .45); }
+.h2-mt5 .stip.aan { background: var(--c-green); box-shadow: 0 0 0 3px rgba(8, 153, 129, .25), 0 0 12px rgba(8, 153, 129, .6); }
+.h2-alles-gelogd { background: rgba(8, 153, 129, .08); border-color: rgba(8, 153, 129, .35); }
+.trend-chip.pos, .pp-badge.pos { background: rgba(8, 153, 129, .16); }
+.trend-chip.neg, .pp-badge.neg { background: rgba(242, 54, 69, .15); }
+.blink-dot { color: var(--c-green); }
+
+/* ---------- signalen-pagina ---------- */
+.sg-stat th, .sg-stat td { border-color: var(--border-soft); }
+.sg-knop { background: var(--panel-2); border-color: var(--border); color: var(--text-dim); }
+.sg-knop:hover { border-color: rgba(41, 98, 255, .65); color: var(--text); }
+.sg-knop.on { background: rgba(41, 98, 255, .22); border-color: var(--c-teal); color: #fff; }
+.sg-opm-regel { background: var(--bg-alt); }
+.sg-opm input[type=text] { background: var(--bg-alt) !important; }
+
+}  /* einde @media screen */

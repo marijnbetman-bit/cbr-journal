@@ -1,0 +1,22 @@
+VPS-UPDATE-5 - handelsvenster Asia (01:00-09:00) + 10:00-15:00
+===============================================================
+Nieuw venster (Amsterdamse tijd, vast, ook in de winter): 01:00-09:00 en 10:00-15:00.
+Het uur 09:00-10:00 blijft dicht. Alleen de journal verandert: er worden geen orders geplaatst.
+
+Dit zip bouwt voort op UPDATE-4 (die bevat UPDATE-3). Heb je UPDATE-4 nog niet gedaan? Doe die dan eerst.
+
+Installeren op de VPS:
+1. Zet dit zip op de VPS en pak uit OVER de journal-map heen
+   (C:\Users\Administrator\Pictures\CBR Journal\journal\journal), 'Alles vervangen'.
+2. Dubbelklik PAS-VENSTER-TOE.bat. Dat zet het venster in journal_config.json
+   (er wordt eerst een backup gemaakt; verder blijft je config zoals hij is).
+3. Sluit het START-JOURNAL-venster en dubbelklik START-JOURNAL.bat opnieuw.
+4. Ververs de pagina (Ctrl+F5 / pagina herladen).
+
+Controle: een signaal om 03:30 mag nu GEEN "buiten venster" meer tonen, een signaal om 09:30 nog wel.
+In het journal krijgen Asia-trades als sessie "Asia" (10:00-15:00 blijft "2e uur Londen").
+Het station (ECHO/PIXEL) hoeft niet aangepast: het telt "binnen venster" vanuit het journal.
+Staat het venster in de journal-config verkeerd, dan telt het avondrapport het ook verkeerd.
+
+Er staat geen database of .env in dit zip. Terug naar het oude venster:
+zet in journal_config.json venster_van op 10:00, venster_tot op 15:00 en haal de regel "venster" weg.

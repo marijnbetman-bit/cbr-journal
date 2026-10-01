@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trade — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+
+  <div class="container">
+    <div class="form-kop">
+      <h2 id="formTitle">Trade toevoegen</h2>
+      <button class="btn" id="kopieerVorige" style="display:none">⧉ Kopieer vorige trade</button>
+      <div class="spacer" style="flex:1"></div>
+      <div class="toetsen" title="Sneltoetsen">
+        <span><kbd>1</kbd>–<kbd>5</kbd> criterium</span>
+        <span><kbd>J</kbd> ✓ <kbd>T</kbd> ? <kbd>N</kbd> ✗</span>
+        <span><kbd>Ctrl</kbd>+<kbd>S</kbd> opslaan</span>
+      </div>
+    </div>
+    <div id="dagregelBanner"></div>
+    <div id="dagmaxBanner" class="twijfel-banner"></div>
+
+    <div id="geenTradeBanner" class="geen-trade-banner">
+      ⚠ Dit was geen trade — een kritisch criterium is ✗ of ?. De discipline zegt: niet nemen.
+    </div>
+    <div id="planVerdict" class="plan-verdict"></div>
+
+    <div class="form-grid">
+      <!-- LINKS: checklist + live grade -->
+      <div>
+        <div class="grade-live" id="gradeLive">
+          <div class="grade big grade-C" id="gradeBadge">C</div>
+          <div class="txt">
+            <div class="g-title">Live grade (volgt uit de checklist)</div>
+            <div class="g-desc" id="gradeDesc">Vul de checklist in.</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Checklist</h2>
+          <p class="sub">Kritische criteria (1–3) zijn alle drie vereist. Een ✗ of ? op één ervan = geen trade.</p>
+          <div id="checklist"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Setup-kwaliteit</h2>
+          <p class="sub">Staat naast de checklist. Een type-3 shift is niet binair:
+            er bestaat duidelijk en er bestaat soft.</p>
+
+          <div class="na-rij">
+            <span class="na-lbl" id="shiftLbl">Hoe duidelijk was de shift?</span>
+            <div class="seg-sm" id="shift_kwaliteit">
+              <button type="button" data-v="duidelijk">duidelijk</button>
+              <button type="button" data-v="soft">soft</button>
+              <button type="button" data-v="onduidelijk">onduidelijk</button>
+            </div>
+          </div>
+
+          <div class="na-rij">
+            <span class="na-lbl">Volume bij de overextensie?</span>
+            <div class="seg-sm" id="volume_hoog">
+              <button type="button" data-v="ja">hoog</button>
+              <button type="button" data-v="nee">laag</button>
+            </div>
+          </div>
+
+          <div class="na-rij">
+            <span class="na-lbl">Kwaliteit van de overextensie?</span>
+            <div class="seg-sm" id="overextensie_kwaliteit">
+              <button type="button" data-v="goed">goed</button>
+              <button type="button" data-v="slecht">slecht</button>
+            </div>
+          </div>
+
+          <label class="field" style="margin-top:10px">
+            <span class="lbl">Minuten in de hourly candle bij entry</span>
+            <input type="number" min="0" max="59" step="1" id="minuten_in_hourly"
+                   placeholder="30–45 is jouw venster" style="width:100%" />
+            <span class="hint" id="minutenHint"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- RECHTS: velden -->
+      <div>
+        <div class="panel">
+          <h2>Basis</h2>
+          <div class="row2">
+            <label class="field"><span class="lbl">Datum</span>
+              <input type="date" id="datum" style="width:100%" /></label>
+            <label class="field"><span class="lbl">Tijd entry</span>
+              <input type="time" id="tijd_entry" style="width:100%" />
+              <span class="hint" id="vensterHint"></span></label>
+          </div>
+          <div class="row2">
+            <label class="field"><span class="lbl">Instrument</span>
+              <input type="text" id="instrument" value="XAUUSD" style="width:100%" /></label>
+            <label class="field"><span class="lbl">Sessie</span>
+              <input type="text" id="sessie" value="2e uur Londen" style="width:100%" /></label>
+          </div>
+          <div class="field"><span class="lbl">Soort</span>
+            <div class="dir-toggle" id="bron">
+              <button type="button" data-v="live">● Live</button>
+              <button type="button" data-v="backtest">⟲ Backtest</button>
+            </div>
+            <div class="hint veld-hint">Backtest = een setup uit het verleden, zonder echt geld.
+              Telt mee voor je checklist-statistiek, niet voor je portfolio.</div>
+          </div>
+          <div class="field"><span class="lbl">Richting</span>
+            <div class="dir-toggle" id="richting">
+              <button type="button" data-v="long">▲ Long</button>
+              <button type="button" data-v="short">▼ Short</button>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0"><span class="lbl">Hoe zeker was je vooraf?</span>
+            <div class="zeker" id="zekerheid">
+              <button type="button" data-v="1">1</button>
+              <button type="button" data-v="2">2</button>
+              <button type="button" data-v="3">3</button>
+              <button type="button" data-v="4">4</button>
+              <button type="button" data-v="5">5</button>
+              <span class="zeker-hint">1 = twijfel · 5 = rotsvast</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="uitkomstPanel" data-na-afloop>
+          <div class="slot" id="slot">
+            <div class="slot-in">
+              <div class="slot-ic">🔒</div>
+              <div>
+                <b>Eerst de checklist</b>
+                <p>Beoordeel de setup voordat je het resultaat invult. Zodra je het bedrag ziet,
+                  kleurt dat je oordeel — een slordige winnaar en een gedisciplineerde verliezer
+                  zijn niet dezelfde trade.</p>
+              </div>
+            </div>
+          </div>
+          <h2>Uitkomst &amp; risico</h2>
+          <p class="sub">Alleen wat telt. Entry/SL/TP-prijzen hoeven niet — RR en risk zeggen alles.</p>
+          <div class="row3">
+            <label class="field"><span class="lbl">RR</span>
+              <input type="number" step="0.01" id="rr" placeholder="1.0" style="width:100%" /></label>
+            <label class="field"><span class="lbl">Risk (€)</span>
+              <input type="number" step="0.01" id="risk_eur" style="width:100%" /></label>
+            <label class="field"><span class="lbl">Charges (€)</span>
+              <input type="number" step="0.01" id="charges" value="-0.06" style="width:100%" /></label>
+          </div>
+          <div class="row2">
+            <label class="field"><span class="lbl">Resultaat (€)</span>
+              <input type="number" step="0.01" id="resultaat_eur" placeholder="+ of -" style="width:100%" /></label>
+            <label class="field"><span class="lbl">Exit-reden</span>
+              <input type="text" id="exit_reden" placeholder="TP geraakt / SL geraakt" style="width:100%" /></label>
+          </div>
+          <div class="na-afloop">
+            <div class="na-kop">Na afloop — twee klikken</div>
+            <div class="na-rij">
+              <span class="na-lbl">Hoe dicht kwam de prijs bij je SL?</span>
+              <div class="seg-sm" id="sl_nabijheid">
+                <button type="button" data-v="nooit">nooit dichtbij</button>
+                <button type="button" data-v="halverwege">halverwege</button>
+                <button type="button" data-v="bijna">bijna geraakt</button>
+              </div>
+            </div>
+            <div class="na-rij">
+              <span class="na-lbl">Voelde dit als luck, zonder duidelijke edge?</span>
+              <div class="seg-sm" id="luck_flag">
+                <button type="button" data-v="ja">ja, meer geluk</button>
+                <button type="button" data-v="nee">nee, dit was mijn setup</button>
+              </div>
+            </div>
+            <div class="na-rij">
+              <span class="na-lbl">En je TP?</span>
+              <div class="seg-sm" id="tp_verloop">
+                <button type="button" data-v="precies">precies goed</button>
+                <button type="button" data-v="liep_door">liep nog ver door</button>
+                <button type="button" data-v="te_vroeg">te vroeg gesloten</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="na-afloop sweep-blok">
+            <div class="na-kop">De sweep meten — ook bij winst</div>
+            <p class="sub" style="margin:2px 0 10px">
+              1 point = 0,10 in prijs. Dus 0,30 boven de vorige high = 3 points.
+              Vul dit bij <em>élke</em> trade in: alleen je verliezers meten geeft
+              een scheve steekproef, en dan lijkt elke sweep groter dan hij is.
+            </p>
+            <div class="row3">
+              <label class="field"><span class="lbl">Overshoot voorbij 1H high/low</span>
+                <input type="number" step="0.1" min="0" id="sweep_overshoot_points"
+                       placeholder="points" style="width:100%" /></label>
+              <label class="field"><span class="lbl">Afstand entry → SL</span>
+                <input type="number" step="0.1" min="0" id="sl_afstand_points"
+                       placeholder="points" style="width:100%" /></label>
+              <label class="field"><span class="lbl">Afstand entry → TP</span>
+                <input type="number" step="0.1" min="0" id="tp_afstand_points"
+                       placeholder="points" style="width:100%" /></label>
+            </div>
+            <div id="slMarge" class="sl-marge"></div>
+
+            <div class="na-rij" id="slDanTpRij">
+              <span class="na-lbl">SL geraakt en daarna alsnog het TP-niveau?</span>
+              <div class="seg-sm" id="sl_dan_tp">
+                <button type="button" data-v="ja">ja</button>
+                <button type="button" data-v="nee">nee</button>
+              </div>
+            </div>
+          </div>
+
+          <details class="optional">
+            <summary>Prijzen invullen (optioneel)</summary>
+            <div class="row3" style="margin-top:12px">
+              <label class="field"><span class="lbl">Entry</span>
+                <input type="number" step="0.01" id="entry" style="width:100%" /></label>
+              <label class="field"><span class="lbl">SL</span>
+                <input type="number" step="0.01" id="sl" style="width:100%" /></label>
+              <label class="field"><span class="lbl">TP</span>
+                <input type="number" step="0.01" id="tp" style="width:100%" /></label>
+            </div>
+          </details>
+        </div>
+
+        <div class="panel" data-na-afloop>
+          <h2>Fouten</h2>
+          <p class="sub">Meerdere codes mogelijk. Klik om te selecteren.</p>
+          <div id="foutcodes"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Screenshots</h2>
+          <p class="sub">Sleep afbeeldingen hierin (pre-entry / entry / post-exit). Ze komen in <code>screenshots/&lt;datum&gt;/</code>.</p>
+          <div class="dropzone" id="dropzone">
+            <div class="big">🖼️</div>
+            <div>Sleep hier je screenshots naartoe</div>
+          </div>
+          <div class="shot-grid" id="shotGrid"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Reflectie</h2>
+          <div class="field"><span class="lbl">Mentale staat</span>
+            <div class="chips" id="emoties"></div>
+            <input type="text" id="mentale_staat" style="width:100%;margin-top:8px"
+                   placeholder="iets anders? (optioneel)" /></div>
+          <div class="field"><span class="lbl">Tags</span>
+            <input type="text" id="tags" style="width:100%" placeholder="bv. sweep van high, na nieuws" />
+            <div class="chips" id="tagSuggesties"></div>
+            <div class="hint veld-hint">Vrije labels om varianten binnen het CBR-model uit elkaar te trekken.
+              Op het dashboard en in je rapportkaart krijgt elke tag zijn eigen expectancy.</div>
+          </div>
+          <label class="field"><span class="lbl">Les (één zin)</span>
+            <input type="text" id="les" style="width:100%" /></label>
+          <label class="field"><span class="lbl">Notities</span>
+            <textarea id="notities" rows="3"></textarea></label>
+          <label class="field"><span class="lbl">DXY-context (optioneel)</span>
+            <input type="text" id="dxy_context" style="width:100%" /></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" id="saveBtn">Opslaan</button>
+      <a class="btn btn-ghost" href="/">Annuleren</a>
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn btn-danger" id="deleteBtn" style="display:none">Verwijderen</button>
+    </div>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/trade.js"></script>
+</body>
+</html>

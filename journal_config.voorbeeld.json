@@ -1,0 +1,23 @@
+{
+  "_uitleg": "Instellingen voor de pre-trade kaart en de dagrem. Wordt bij elke aanroep opnieuw gelezen, dus wijzigen werkt meteen - geen herstart nodig.",
+
+  "venster_van": "11:00",
+  "venster_tot": "12:00",
+  "_venster": "Je handelsvenster in Amsterdamse tijd. Verplaats je naar de New York-sessie, zet hier bijvoorbeeld 15:30-16:30.",
+
+  "dagmaximum": 2,
+  "_dagmaximum": "Na dit aantal trades op een dag verschijnt de dagrem. Blokkeert niet, vertraagt alleen.",
+
+  "handelsdagen": [1, 3],
+  "_handelsdagen": "0=maandag ... 6=zondag. [1,3] = dinsdag en donderdag, jouw thuiswerkdagen.",
+
+  "foutcodes": [
+    "buiten venster",
+    "tegen bias",
+    "te vroeg ingestapt",
+    "SL te krap",
+    "te vroeg gesloten",
+    "boven dagmaximum",
+    "geen echte shift"
+  ]
+}
