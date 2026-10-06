@@ -42,6 +42,8 @@ STANDAARD = {
     "eis_1h_break": True,         # de impuls moet de high/low van de vorige 1H-candle breken
     "eis_50_impuls": True,
     "eis_bos": True,              # False = geen break of structure nodig: entry direct na de sweep
+    "bos_op_wick": False,         # True = een wick voorbij de pullback is genoeg (type 3 shift, Marijn 6 okt 2026); False = close
+    "sweep_direct": False,        # True = de candle direct na de top mag de sweep zijn (pullback = de topcandle zelf)
     "entry_pct": 0.5,             # entry = pullback-niveau + pct x (sweep - pullback); 0.5 = midden, 0.3 = dichter bij de BOS        # 1 okt 2026: False = 50% van de impuls raken maakt de setup NIET meer ongeldig
 }
 
@@ -173,6 +175,19 @@ def breekt_vorige_1h(bars, imp, cfg) -> bool:
     return imp.tot > hoog if imp.richting == "up" else imp.tot < laag
 
 
+def _kleine_sweep(bars, j, richting, cfg) -> bool:
+    """sweep_direct: de volgende candle gaat hooguit sweep_max_points door de high/low van j en sluit er weer onder/boven
+    (een sweep, geen doorlopende impuls)."""
+    if j + 1 >= len(bars):
+        return False
+    n = bars[j + 1]
+    if richting == "up":
+        door = (_h(n) - _h(bars[j])) / cfg["punt"]
+        return 0 < door <= cfg["sweep_max_points"] and _c(n) < _h(bars[j])
+    door = (_l(bars[j]) - _l(n)) / cfg["punt"]
+    return 0 < door <= cfg["sweep_max_points"] and _c(n) > _l(bars[j])
+
+
 def is_top(bars, j, richting) -> bool:
     """j is een top als de volgende (gesloten) candle niet verder komt."""
     if j + 1 >= len(bars):
@@ -265,11 +280,14 @@ def volg_setup(bars, imp: Impuls, cfg, live=None) -> Setup:
             if is_live:
                 break
             if voorbij(uiterste(c), s.top):
-                if k == 0:
+                if k == 0 and not cfg.get("sweep_direct", False):
                     # direct doorgelopen: geen mini-pullback, dan was dit niet de top
                     s.status, s.reden = "vervallen", "geen mini-pullback: de impuls liep gewoon door"
                     _event(s, "vervallen", tijd)
                     return s
+                if pullback is None:                  # sweep_direct: de structuur is de topcandle zelf
+                    pullback = tegen(bars[j])
+                    s.pullback = pullback
                 door = abs(uiterste(c) - s.top) / punt
                 if door > cfg["sweep_max_points"]:
                     s.status, s.reden = "vervallen", f"{door:.0f} points door de top: geen sweep maar een nieuwe impuls"
@@ -301,7 +319,8 @@ def volg_setup(bars, imp: Impuls, cfg, live=None) -> Setup:
                     s.status, s.reden = "vervallen", f"{door:.0f} points door de top: geen sweep maar een nieuwe impuls"
                     _event(s, "vervallen", tijd)
                     return s
-            gesloten_voorbij = (not cfg.get("eis_bos", True)) or ((_c(c) < pullback) if up else (_c(c) > pullback))
+            niveau = tegen(c) if cfg.get("bos_op_wick", False) else _c(c)          # wick (type 3 shift) of close
+            gesloten_voorbij = (not cfg.get("eis_bos", True)) or ((niveau < pullback) if up else (niveau > pullback))
             if gesloten_voorbij:
                 bos_k = k
                 s.bos_tijd = tijd
@@ -387,7 +406,9 @@ def scan(bars, cfg=None, live=None, vanaf_index=0):
     start = max(cfg["atr_periode"] + cfg["impuls_min_candles"], vanaf_index)
     for j in range(start, len(bars) - 1):
         for richting in ("up", "down"):
-            if j <= bezet_tot[richting] or not is_top(bars, j, richting):
+            if j <= bezet_tot[richting]:
+                continue
+            if not is_top(bars, j, richting) and not (cfg.get("sweep_direct", False) and _kleine_sweep(bars, j, richting, cfg)):
                 continue
             imp = impuls_naar(bars, j, richting, cfg)
             if imp is None:
