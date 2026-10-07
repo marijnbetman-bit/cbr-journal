@@ -5,3 +5,4 @@ anthropic>=0.40   # alleen nodig voor het foto-logboek; zonder API-sleutel vul j
 MetaTrader5>=5.0.5000   # MT5-koppeling: leest je trades (alleen Windows)
 fpdf2>=2.7   # PDF-rapport (kerncijfers op 1 pagina)
 truststore>=0.9   # Telegram via de Windows-certificaten (VPS met HTTPS-inspectie)
+tzdata>=2024.1   # tijdzones (structuur_detector valt anders terug op een eigen CET/CEST-regel)

@@ -241,6 +241,10 @@ def _callback(c, cb):
         import signalen
         signalen.callback(c, cb)
         return
+    if data.startswith(("v:", "t:")):              # plan v3 fase 2: labels en TP-type
+        import v3_labels
+        v3_labels.callback(c, cb)
+        return
     antwoord = ""
     try:
         if data.startswith("e:"):
@@ -275,6 +279,16 @@ def _bericht(c, m):
     tekst = (m.get("text") or "").strip()
     reply = m.get("reply_to_message") or {}
     if reply.get("message_id") and tekst and not tekst.startswith("/"):
+        # reply op een v3-trade-bericht = het begin van de expansie (plan v3, fase 2)
+        try:
+            import v3_labels
+            zin = v3_labels.antwoord(reply["message_id"], tekst)
+        except Exception as e:
+            zin = None
+            print("[journal-bot] v3-antwoord:", e)
+        if zin:
+            stuur(c, zin)
+            return
         # reply op een SIGNAAL-bericht = opmerking voor de dataset (1 okt 2026)
         try:
             import signalen
@@ -320,6 +334,8 @@ def _bericht(c, m):
                  "/log — wat de wachter de laatste 15 keer zag (/log 40 voor meer)\n"
                  "/open — wat nog beoordeeld moet\n/vandaag — je trades van vandaag\n"
                  "/replay 2026-09-22 — welke setups de wachter die dag gezien had\n"
+                 "/v3 — je v3-labels van de laatste 14 dagen\n"
+                 "/tptype — TP-type en expansie-begin van je laatste trades (nog niet bevestigd)\n"
                  "/test — even kijken of ik je bereik")
     elif cmd == "/status":
         import signalen
@@ -353,6 +369,25 @@ def _bericht(c, m):
         datum = delen[1] if len(delen) > 1 else date.today().isoformat()
         stuur(c, f"Ik speel {datum} opnieuw af, even geduld…")
         stuur(c, signalen.replay_tekst(signalen.replay_aanvraag(datum)))
+    elif cmd == "/v3":
+        import v3_labels
+        stuur(c, v3_labels.telling_tekst())
+    elif cmd == "/tptype":
+        import v3_labels
+        con = _conn()
+        try:
+            kol = {r[1] for r in con.execute("PRAGMA table_info(trades)")}
+            waar = "(tp_type_bron IS NULL OR tp_type_bron!='marijn' OR expansie_bron IS NULL OR expansie_bron!='marijn')" \
+                if "tp_type_bron" in kol else "1=1"
+            ids = [r["id"] for r in con.execute(
+                f"SELECT id FROM trades WHERE {waar} AND verwijderd_op IS NULL AND (status IS NULL OR status='genomen') "
+                "AND tijd_entry IS NOT NULL ORDER BY datum DESC, tijd_entry DESC LIMIT 5")]
+        finally:
+            con.close()
+        if not ids:
+            stuur(c, "Alle TP-types zijn bevestigd. 👌")
+        for tid in reversed(ids):
+            v3_labels.meld_trade(tid)
     elif cmd == "/test":
         stuur(c, "✅ Test: ik bereik je. Signalen en journal lopen via deze bot.")
     elif cmd == "/open":

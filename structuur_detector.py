@@ -23,10 +23,44 @@ bars = [(tijd, open, high, low, close[, spread]), ...] met tijd in epoch-seconde
 """
 
 import math
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta, timezone, tzinfo
 
-AMS = ZoneInfo("Europe/Amsterdam")
+
+def _laatste_zondag(jaar, maand):
+    d = datetime(jaar, maand + 1, 1) - timedelta(days=1) if maand < 12 else datetime(jaar, 12, 31)
+    return d - timedelta(days=(d.weekday() + 1) % 7)
+
+
+class _Amsterdam(tzinfo):
+    """Europe/Amsterdam zonder tijdzonedatabase (de Python van het journal heeft geen tzdata): CET, en CEST van de
+    laatste zondag van maart tot de laatste zondag van oktober, 01:00 UTC (EU-regel sinds 1996)."""
+
+    def _zomer_utc(self, utc):
+        begin = _laatste_zondag(utc.year, 3).replace(hour=1)
+        eind = _laatste_zondag(utc.year, 10).replace(hour=1)
+        return begin <= utc.replace(tzinfo=None) < eind
+
+    def fromutc(self, dt):
+        return dt + timedelta(hours=2 if self._zomer_utc(dt) else 1)
+
+    def utcoffset(self, dt):
+        lokaal = dt.replace(tzinfo=None)
+        begin = _laatste_zondag(lokaal.year, 3).replace(hour=2)
+        eind = _laatste_zondag(lokaal.year, 10).replace(hour=3)
+        return timedelta(hours=2 if begin <= lokaal < eind else 1)
+
+    def dst(self, dt):
+        return self.utcoffset(dt) - timedelta(hours=1)
+
+    def tzname(self, dt):
+        return "CEST" if self.dst(dt) else "CET"
+
+
+try:
+    from zoneinfo import ZoneInfo
+    AMS = ZoneInfo("Europe/Amsterdam")
+except Exception:                                # geen tzdata (Windows zonder het pakket)
+    AMS = _Amsterdam()
 
 STANDAARD = {
     "punt": 0.10,                  # 1 point = 0,10 in prijs (goud)

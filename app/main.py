@@ -2018,6 +2018,11 @@ try:
         print("[journal] signaalwachter niet geladen:", _e)
     if _sig is not None and _sig.router is not None:
         app.include_router(_sig.router)                  # /api/signalen, /api/signalen/replay
+    try:
+        import v3_labels as _v3                          # plan v3 fase 2 (7 okt 2026)
+    except Exception as _e:                              # pragma: no cover
+        _v3 = None
+        print("[journal] v3-labels niet geladen:", _e)
     _koppeling = _mt5.start_achtergrond()
     if _koppeling is not None:
         def _na_nieuwe_trade(tid):
@@ -2029,10 +2034,17 @@ try:
                     print("[journal] signaal koppelen mislukt:", _e)
             if _bot is not None:
                 _bot.meld_trade(tid)         # bericht met de tien knoppen
+            if _v3 is not None:
+                try:
+                    _v3.meld_trade(tid)      # plan v3 fase 2: TP-type en begin van de expansie
+                except Exception as _e:
+                    print("[journal] v3 trade-bericht mislukt:", _e)
         _koppeling.bij_nieuwe_trade.append(_na_nieuwe_trade)
         if _bot is not None:
             _koppeling.bij_waarschuwing.append(_bot.meld_tekst)   # o.a. verkeerd MT5-account
         if _sig is not None:
             _koppeling.na_ronde.append(_sig.na_ronde)
+        if _v3 is not None:
+            _koppeling.na_ronde.append(_v3.na_ronde)     # plan v3 fase 2: v3-signalen met labelknoppen
 except Exception as _e:                                    # pragma: no cover
     print("[journal] MT5-koppeling niet gestart:", _e)
