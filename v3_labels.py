@@ -41,6 +41,8 @@ RUNTIME = {
     "match_sl_points": 3,        # trade hoort bij een v3-kandidaat: SL binnen 3 points ...
     "match_voor_min": 12,        # ... en je entry van 12 min vóór de order ...
     "match_na_min": 33,          # ... tot 33 min erna (30 candles orderduur + 3)
+    "dagbeeld": True,            # elke handelsdag één vraag: bullish / bearish / range / geen
+    "dagbeeld_tijd": "08:30",    # Amsterdamse tijd waarop de vraag komt (daarna: /bias)
 }
 
 # 'label' = de samenvatting die het station leest: A/B/C (ja + grade), nee, niet_gezien. Sinds 8 okt 2026 komt hij uit de
@@ -50,7 +52,12 @@ LABEL_CODE = {v[0]: k for k, v in LABELS.items()}
 OORDELEN = {"j": ("ja", "✅ ja"), "n": ("nee", "❌ nee"), "z": ("niet_gezien", "👀 niet gezien")}
 GRADES = ("A", "B", "C")
 REDENEN = {"bos": "Geen goede BOS", "exp": "Geen goede expansie", "t3": "Geen goede type 3 shift", "cons": "Te veel consolidatie",
-           "tp": "TP al gehit voor ik kon enteren"}
+           "tp": "TP al gehit voor ik kon enteren", "meet": "Verkeerd gemeten (sweep/BOS/expansie)"}
+# Optioneel na A/B/C (8 okt 2026): wat maakte hem goed? Leert de bots wat je zoekt, niet alleen wat je afkeurt.
+PLUSPUNTEN = {"sweep": "Mooie sweep (gelijke highs/lows)", "bos": "Sterke BOS / displacement", "lvl": "HTF-level geraakt (1H/4H)",
+              "rr": "Goede RR naar het doel"}
+# Dagbeeld (8 okt 2026): één tik per handelsdag. Het station gebruikt hem alleen voor signalen NA het moment van tikken.
+DAGBEELDEN = {"bu": ("bullish", "📈 bullish"), "be": ("bearish", "📉 bearish"), "ra": ("range", "↔ range"), "ge": ("geen", "– geen beeld")}
 TP_TYPES = {"11": "1:1", "50": "50%", "an": "anders"}
 
 _STATUS = {"melding": "nog niet gestart", "laatste_ronde": None, "fout": None, "verstuurd": 0}
@@ -96,11 +103,14 @@ CREATE TABLE IF NOT EXISTS v3_opmerkingen (
     id INTEGER PRIMARY KEY AUTOINCREMENT, groep TEXT, ts TEXT, tekst TEXT, bron TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_v3_opm ON v3_opmerkingen(groep);
+CREATE TABLE IF NOT EXISTS v3_dagbeeld (
+    datum TEXT PRIMARY KEY, bias TEXT, ts TEXT, bericht_id INTEGER
+);
 """
 
 # 8 okt 2026: getrapte knoppen. oordeel ja/nee/niet_gezien, grade A/B/C (alleen bij ja), redenen = JSON-lijst van sleutels uit
 # REDENEN (alleen bij nee), afgerond = 1 als je klaar bent. 'label' blijft de samenvatting voor het station.
-V3_KOLOMMEN = {"oordeel": "TEXT", "grade": "TEXT", "redenen": "TEXT", "afgerond": "INTEGER"}
+V3_KOLOMMEN = {"oordeel": "TEXT", "grade": "TEXT", "redenen": "TEXT", "afgerond": "INTEGER", "pluspunten": "TEXT"}
 
 
 def _migreer_v3(con, pad):
@@ -185,13 +195,25 @@ def _redenen(r):
         return []
 
 
+def _pluspunten(r):
+    try:
+        return [x for x in json.loads(r["pluspunten"] or "[]") if x in PLUSPUNTEN]
+    except (ValueError, TypeError, KeyError, IndexError):
+        return []
+
+
+def _klein(t):
+    return t if t[:2].isupper() else t[0].lower() + t[1:]          # "TP" en "HTF" blijven hoofdletters
+
+
 def samenvatting(r):
-    """'✅ ja · B', '❌ nee · geen goede BOS, te veel consolidatie' of '👀 niet gezien'."""
+    """'✅ ja · B · mooie sweep', '❌ nee · geen goede BOS, te veel consolidatie' of '👀 niet gezien'."""
     o = r["oordeel"]
     if o == "ja":
-        return "✅ ja" + (f" · {r['grade']}" if r["grade"] else "")
+        plus = [_klein(PLUSPUNTEN[x]) for x in _pluspunten(r)]
+        return "✅ ja" + (f" · {r['grade']}" if r["grade"] else "") + (" · " + ", ".join(plus) if plus else "")
     if o == "nee":
-        red = [t if t[:2].isupper() else t[0].lower() + t[1:] for t in (REDENEN[x] for x in _redenen(r))]   # "TP" blijft "TP"
+        red = [_klein(REDENEN[x]) for x in _redenen(r)]
         return "❌ nee" + (" · " + ", ".join(red) if red else "")
     if o == "niet_gezien":
         return "👀 niet gezien"
@@ -213,6 +235,10 @@ def knoppen_signaal(groep_id, r=None, stap=None):
     k = lambda tekst, code: {"text": tekst, "callback_data": f"v:{groep_id}:{code}"}    # noqa: E731
     if stap == "ja":
         return {"inline_keyboard": [[k(g, g.lower()) for g in GRADES]]}
+    if stap == "plus":                                   # optioneel na de grade: waarom goed? (aan/uit), dan klaar
+        gekozen = _pluspunten(r) if r is not None else []
+        rijen = [[k(("✓ " if s in gekozen else "") + t, "p" + s)] for s, t in PLUSPUNTEN.items()]
+        return {"inline_keyboard": rijen + [[k("klaar", "k")]]}
     if stap == "nee":
         gekozen = _redenen(r) if r is not None else []
         rijen = [[k(("✓ " if s in gekozen else "") + t, "r" + s)] for s, t in REDENEN.items()]
@@ -461,7 +487,70 @@ def ronde(koppeling, cfg=None, stuur=True):
         finally:
             con.close()
     _STATUS.update(melding="actief", fout=None, laatste_ronde=datetime.now().isoformat(timespec="seconds"))
+    if stuur:
+        try:
+            dagbeeld_ronde(cfg)
+        except Exception as e:
+            print("[v3] dagbeeld:", e)
     return uit
+
+
+# ------------------------------------------------------------------ dagbeeld (8 okt 2026)
+
+def knoppen_dagbeeld(datum, bias=None):
+    return {"inline_keyboard": [[{"text": ("● " if bias == waarde else "") + tekst, "callback_data": f"d:{datum}:{code}"}
+                                 for code, (waarde, tekst) in DAGBEELDEN.items()]]}
+
+
+def stuur_dagbeeld(datum=None, pad=None):
+    """De vraag 'wat is je beeld vandaag?' (één bericht per dag; /bias stuurt hem opnieuw). Geeft message_id of None."""
+    datum = datum or datetime.now(AMS).strftime("%Y-%m-%d")
+    con = conn(pad)
+    try:
+        r = con.execute("SELECT * FROM v3_dagbeeld WHERE datum=?", (datum,)).fetchone()
+        bias = r["bias"] if r else None
+        mid = _stuur(f"🧭 <b>Je dagbeeld voor {datum}</b> (XAUUSD)\nEén tik. De bots gebruiken hem alleen voor signalen ná je tik, "
+                     f"en kijken of je oordeel en de uitkomst ervan afhangen.", knoppen_dagbeeld(datum, bias), stil=True)
+        if mid:
+            con.execute("INSERT INTO v3_dagbeeld(datum, bias, ts, bericht_id) VALUES(?,?,?,?) ON CONFLICT(datum) DO UPDATE SET bericht_id=excluded.bericht_id",
+                        (datum, bias, r["ts"] if r else None, mid))
+            _onthoud_bericht(con, mid, "dagbeeld", datum)
+            con.commit()
+        return mid
+    finally:
+        con.close()
+
+
+def dagbeeld_ronde(cfg, nu=None, pad=None):
+    """Op een handelsdag vanaf dagbeeld_tijd één keer de vraag sturen."""
+    if not cfg.get("dagbeeld", True):
+        return None
+    nu = nu or datetime.now(AMS)
+    dagen = cfg.get("handelsdagen")
+    if (dagen is not None and nu.weekday() not in dagen) or (dagen is None and nu.weekday() >= 5):
+        return None
+    if nu.strftime("%H:%M") < (cfg.get("dagbeeld_tijd") or "08:30"):
+        return None
+    datum = nu.strftime("%Y-%m-%d")
+    con = conn(pad)
+    try:
+        al = con.execute("SELECT 1 FROM v3_dagbeeld WHERE datum=? AND (bericht_id IS NOT NULL OR bias IS NOT NULL)", (datum,)).fetchone()
+    finally:
+        con.close()
+    return None if al else stuur_dagbeeld(datum, pad)
+
+
+def zet_dagbeeld(datum, code, pad=None):
+    waarde = DAGBEELDEN[code][0]
+    with _LOCK:
+        con = conn(pad)
+        try:
+            con.execute("INSERT INTO v3_dagbeeld(datum, bias, ts) VALUES(?,?,?) ON CONFLICT(datum) DO UPDATE SET bias=excluded.bias, ts=excluded.ts",
+                        (datum, waarde, datetime.now().isoformat(timespec="seconds")))
+            con.commit()
+        finally:
+            con.close()
+    return waarde
 
 
 def na_ronde(koppeling):
@@ -475,7 +564,8 @@ def na_ronde(koppeling):
 
 def zet_stap(groep_id, code, bron="telegram", pad=None):
     """Eén tik op een signaalknop, voor alle kandidaten van dezelfde sweep. Geeft (rij, stap, korte tekst voor Telegram).
-    j = ja (dan grade), a/b/c = grade (klaar), n = nee (dan redenen), r<sleutel> = reden aan/uit, k = klaar,
+    j = ja (dan grade), a/b/c = grade (label staat; dan optioneel pluspunten), p<sleutel> = pluspunt aan/uit, n = nee (dan redenen),
+    r<sleutel> = reden aan/uit, k = klaar,
     z = niet gezien (klaar), w = wijzig (terug naar stap 1, nog niets gewist), i = de samenvatting (niets)."""
     with _LOCK:
         con = conn(pad)
@@ -485,12 +575,18 @@ def zet_stap(groep_id, code, bron="telegram", pad=None):
                 raise ValueError(f"kandidaat {groep_id} bestaat niet")
             zet, stap, tekst = None, None, None
             if code == "j":
-                zet, stap, tekst = dict(oordeel="ja", grade=None, label=None, redenen="[]", afgerond=0), "ja", "Ja: kies de grade"
+                zet, stap, tekst = dict(oordeel="ja", grade=None, label=None, redenen="[]", pluspunten="[]", afgerond=0), "ja", "Ja: kies de grade"
             elif code in ("a", "b", "c"):
-                g = code.upper()
-                zet, stap, tekst = dict(oordeel="ja", grade=g, label=g, redenen="[]", afgerond=1), "klaar", f"ja · {g} ✓"
+                g = code.upper()                              # het label staat meteen; pluspunten zijn optioneel
+                zet, stap, tekst = (dict(oordeel="ja", grade=g, label=g, redenen="[]", afgerond=1), "plus",
+                                    f"ja · {g} ✓ · optioneel: wat maakte hem goed? Anders: klaar")
+            elif code.startswith("p") and code[1:] in PLUSPUNTEN and r["oordeel"] == "ja":
+                plus = _pluspunten(r)
+                plus = [x for x in plus if x != code[1:]] if code[1:] in plus else plus + [code[1:]]
+                plus = [x for x in PLUSPUNTEN if x in plus]
+                zet, stap, tekst = dict(pluspunten=json.dumps(plus)), "plus", "Bijgewerkt"
             elif code == "n":
-                zet, stap, tekst = dict(oordeel="nee", grade=None, label="nee", redenen="[]", afgerond=0), "nee", "Nee: kies de reden(en), dan klaar"
+                zet, stap, tekst = dict(oordeel="nee", grade=None, label="nee", redenen="[]", pluspunten="[]", afgerond=0), "nee", "Nee: kies de reden(en), dan klaar"
             elif code.startswith("r") and code[1:] in REDENEN:
                 red = _redenen(r) if r["oordeel"] == "nee" else []
                 red = [x for x in red if x != code[1:]] if code[1:] in red else red + [code[1:]]
@@ -499,7 +595,7 @@ def zet_stap(groep_id, code, bron="telegram", pad=None):
             elif code == "k":
                 zet, stap, tekst = dict(afgerond=1), "klaar", "Opgeslagen ✓"
             elif code == "z":
-                zet, stap, tekst = dict(oordeel="niet_gezien", grade=None, label="niet_gezien", redenen="[]", afgerond=1), "klaar", "Niet gezien ✓"
+                zet, stap, tekst = dict(oordeel="niet_gezien", grade=None, label="niet_gezien", redenen="[]", pluspunten="[]", afgerond=1), "klaar", "Niet gezien ✓"
             elif code == "w":
                 stap, tekst = "1", "Kies opnieuw"
             elif code == "i":
@@ -742,7 +838,11 @@ def callback(c, cb):
         soort, ref, code = (cb.get("data") or "").split(":")
         msg = cb.get("message") or {}
         doel = {"chat_id": msg.get("chat", {}).get("id"), "message_id": msg.get("message_id")}
-        if soort == "v":
+        if soort == "d":                                 # dagbeeld: 'd:{datum}:{code}'
+            waarde = zet_dagbeeld(ref, code)
+            jb.api(c["token"], "editMessageReplyMarkup", {**doel, "reply_markup": knoppen_dagbeeld(ref, waarde)})
+            antwoord = f"Dagbeeld {waarde} ✓ (geldt voor signalen vanaf nu)"
+        elif soort == "v":
             r, stap, antwoord = zet_stap(int(ref), code)
             if code != "i":
                 jb.api(c["token"], "editMessageReplyMarkup", {**doel, "reply_markup": knoppen_signaal(int(ref), r, stap)})
@@ -826,7 +926,7 @@ def telling_tekst(pad=None):
 # ------------------------------------------------------------------ signalenpagina en CSV (8 okt 2026)
 
 CSV_KOLOMMEN = ["datum", "tijd", "trade", "groep", "orders", "sweep", "entry", "sl", "tp_11", "tp_50", "begin", "sweep_tijd", "bos_tijd",
-                "begin_tijd", "oordeel", "grade", "redenen", "afgerond", "label", "label_ts", "opmerkingen",
+                "begin_tijd", "oordeel", "grade", "redenen", "pluspunten", "dagbeeld", "afgerond", "label", "label_ts", "opmerkingen",
                 "exp_atr", "exp_candles", "tussenstukjes", "terug_bij_sweep", "sweep_points", "n_highs", "bos_close", "bos_been_atr",
                 "risico_points", "rr_50", "brak_1h", "minuut_ams", "afstand_dag_extreem_points", "spread"]
 
@@ -841,6 +941,7 @@ def overzicht(van=None, tot=None, pad=None):
         if tot:
             w.append("datum<=?"); p.append(tot)
         rijen = con.execute("SELECT * FROM v3_labels" + (" WHERE " + " AND ".join(w) if w else "") + " ORDER BY order_ts, id", p).fetchall()
+        beeld = {r["datum"]: dict(r) for r in con.execute("SELECT * FROM v3_dagbeeld")}
         opm = {}
         for o in con.execute("SELECT groep, ts, tekst FROM v3_opmerkingen ORDER BY id"):
             opm.setdefault(o["groep"], []).append({"ts": o["ts"], "tekst": o["tekst"]})
@@ -855,7 +956,9 @@ def overzicht(van=None, tot=None, pad=None):
                 km = {}
             d = {k: r[k] for k in ("id", "datum", "tijd", "trade", "groep", "sweep", "entry", "sl", "tp_11", "tp_50", "begin",
                                    "sweep_tijd", "bos_tijd", "begin_tijd", "oordeel", "grade", "afgerond", "label", "label_ts")}
-            d.update(orders=1, redenen=[REDENEN[x] for x in _redenen(r)], samenvatting=samenvatting(r) if r["oordeel"] else None,
+            b = beeld.get(r["datum"]) or {}
+            d.update(orders=1, redenen=[REDENEN[x] for x in _redenen(r)], pluspunten=[PLUSPUNTEN[x] for x in _pluspunten(r)],
+                     dagbeeld=b.get("bias"), samenvatting=samenvatting(r) if r["oordeel"] else None,
                      verstuurd=r["bericht_id"] is not None, opmerkingen=opm.get(r["groep"], []), kenmerken=km)
             gezien[r["groep"]] = d
             uit.append(d)
@@ -872,6 +975,7 @@ def overzicht_csv(van=None, tot=None, pad=None):
     for d in reversed(overzicht(van, tot, pad)):
         rij = dict(d, **(d["kenmerken"] or {}))
         rij["redenen"] = ", ".join(d["redenen"])
+        rij["pluspunten"] = ", ".join(d["pluspunten"])
         rij["opmerkingen"] = " | ".join(f"{o['ts'][:16].replace('T', ' ')}: {o['tekst']}" for o in d["opmerkingen"])
         w.writerow(["" if rij.get(k) is None else rij.get(k) for k in CSV_KOLOMMEN])
     return "﻿" + buf.getvalue()

@@ -241,7 +241,7 @@ def _callback(c, cb):
         import signalen
         signalen.callback(c, cb)
         return
-    if data.startswith(("v:", "t:")):              # plan v3 fase 2: labels en TP-type
+    if data.startswith(("v:", "t:", "d:")):        # plan v3: labels, TP-type, dagbeeld
         import v3_labels
         v3_labels.callback(c, cb)
         return
@@ -334,6 +334,7 @@ def _bericht(c, m):
                  "/log — wat de wachter de laatste 15 keer zag (/log 40 voor meer)\n"
                  "/open — wat nog beoordeeld moet\n/vandaag — je trades van vandaag\n"
                  "/replay 2026-09-22 — welke setups de wachter die dag gezien had\n"
+                 "/bias — je dagbeeld voor vandaag (bullish / bearish / range / geen)\n"
                  "/v3 — je v3-labels van de laatste 14 dagen\n"
                  "/tptype — TP-type en expansie-begin van je laatste trades (nog niet bevestigd)\n"
                  "/test — even kijken of ik je bereik")
@@ -369,6 +370,10 @@ def _bericht(c, m):
         datum = delen[1] if len(delen) > 1 else date.today().isoformat()
         stuur(c, f"Ik speel {datum} opnieuw af, even geduld…")
         stuur(c, signalen.replay_tekst(signalen.replay_aanvraag(datum)))
+    elif cmd == "/bias":
+        import v3_labels
+        if not v3_labels.stuur_dagbeeld():
+            stuur(c, "Kon de dagbeeld-vraag niet sturen.")
     elif cmd == "/v3":
         import v3_labels
         stuur(c, v3_labels.telling_tekst())

@@ -85,7 +85,7 @@ async function laadV3(q) {
     const oordeel = r.oordeel ? esc(r.samenvatting) + (r.afgerond ? "" : ' <span class="sg-sub">(nog niet klaar)</span>') : '<span class="sg-sub">open</span>';
     return `<tr><td>${esc(datumLabel(r.datum))} ${esc(r.tijd || "")}</td><td>${esc((r.trade || "").toUpperCase())}${r.orders > 1 ? ` <span class="sg-sub">(${r.orders} orders)</span>` : ""}</td>
       <td class="num">${r.entry == null ? "–" : nl(r.entry, 2)}</td><td class="num">${r.sl == null ? "–" : nl(r.sl, 2)}</td>
-      <td>${oordeel}</td><td>${r.grade ? esc(r.grade) : "–"}</td><td>${r.redenen.length ? esc(r.redenen.join(", ")) : "–"}</td><td>${opm || "–"}</td></tr>`;
+      <td>${oordeel}</td><td>${r.grade ? esc(r.grade) : "–"}</td><td>${(r.redenen || []).concat(r.pluspunten || []).length ? esc((r.redenen || []).concat(r.pluspunten || []).join(", ")) : "–"}</td><td>${opm || "–"}</td></tr>`;
   };
   box.innerHTML = `
     <div class="panel">
@@ -100,7 +100,7 @@ async function laadV3(q) {
         <div class="mt-cell"><div class="k">Nog open</div><div class="val ${t.open ? "neg" : ""}">${t.open || 0}</div></div>
       </div>
       <div class="sg-wrap"><table class="sg-stat">
-        <thead><tr><th>Wanneer</th><th>Richting</th><th class="num">Entry</th><th class="num">SL</th><th>Oordeel</th><th>Grade</th><th>Redenen</th><th>Opmerkingen</th></tr></thead>
+        <thead><tr><th>Wanneer</th><th>Richting</th><th class="num">Entry</th><th class="num">SL</th><th>Oordeel</th><th>Grade</th><th>Redenen / pluspunten</th><th>Opmerkingen</th></tr></thead>
         <tbody>${(V.signalen || []).slice(0, 200).map(rij).join("") || '<tr><td colspan="8" class="sg-sub">Nog geen v3-signalen in deze periode.</td></tr>'}</tbody>
       </table></div>
     </div>`;

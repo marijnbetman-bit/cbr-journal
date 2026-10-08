@@ -167,9 +167,16 @@ if rijen:
     check(teksten(km) == ["A", "B", "C"], f"ja -> knoppen A | B | C ({a})")
     check(all(x["oordeel"] == "ja" and x["label"] is None and not x["afgerond"] for x in groep_rijen(g0)), "ja zonder grade: nog niet klaar (geen label)")
     km, a, m = tik(r0["id"], "b", mid); alle_methoden += m
-    check(teksten(km) == ["✅ ja · B", "↩ wijzig"], f"B -> klaar, bericht toont '{teksten(km)[0] if km else '-'}' + ↩ wijzig")
+    check(teksten(km) == list(V.PLUSPUNTEN.values()) + ["klaar"], f"B -> optioneel de pluspunten + klaar ({a})")
     check(all(x["oordeel"] == "ja" and x["grade"] == "B" and x["label"] == "B" and x["afgerond"] == 1 for x in groep_rijen(g0)),
-          "opgeslagen voor de hele sweep: oordeel ja, grade B, label B")
+          "label staat al na de grade (pluspunten zijn optioneel): oordeel ja, grade B, label B")
+    km, a, m = tik(r0["id"], "psweep", mid); alle_methoden += m
+    km, a, m = tik(r0["id"], "plvl", mid); alle_methoden += m
+    check(teksten(km)[0].startswith("✓ ") and teksten(km)[2].startswith("✓ ") and not teksten(km)[1].startswith("✓"), "pluspunten aan met ✓")
+    km, a, m = tik(r0["id"], "k", mid); alle_methoden += m
+    check(teksten(km) == ["✅ ja · B · mooie sweep (gelijke highs/lows), HTF-level geraakt (1H/4H)", "↩ wijzig"],
+          f"klaar -> '{teksten(km)[0] if km else '-'}' + ↩ wijzig")
+    check(json.loads(groep_rijen(g0)[0]["pluspunten"]) == ["sweep", "lvl"], "pluspunten opgeslagen voor de hele sweep")
 
     km, a, m = tik(r0["id"], "w", mid); alle_methoden += m
     check(teksten(km) == ["✅ ja", "❌ nee", "👀 niet gezien"], "↩ wijzig -> terug naar stap 1")
@@ -192,14 +199,18 @@ if rijen:
     km, a, m = tik(r0["id"], "z", mid); alle_methoden += m
     check(teksten(km) == ["👀 niet gezien", "↩ wijzig"], "niet gezien -> meteen klaar")
     x = groep_rijen(g0)[0]
-    check(x["oordeel"] == "niet_gezien" and x["grade"] is None and json.loads(x["redenen"]) == [] and x["label"] == "niet_gezien",
-          "opgeslagen: oordeel niet_gezien, oude redenen gewist")
+    check(x["oordeel"] == "niet_gezien" and x["grade"] is None and json.loads(x["redenen"]) == [] and x["label"] == "niet_gezien"
+          and json.loads(x["pluspunten"]) == [], "opgeslagen: oordeel niet_gezien, oude redenen en pluspunten gewist")
     km, a, m = tik(r0["id"], "i", mid); alle_methoden += m
     check(km is None and a == "👀 niet gezien", "tik op de samenvatting: niets verandert")
 
     r1 = next(r for g, rs in per_groep.items() if g != g0 for r in rs[:1])
     km, a, m = tik(r1["id"], "a", r1["bericht_id"]); alle_methoden += m
-    check(teksten(km) == ["✅ ja · A", "↩ wijzig"] and groep_rijen(r1["groep"])[0]["grade"] == "A", "oude knop A (berichten van vóór vandaag): ja · A")
+    check(teksten(km) == list(V.PLUSPUNTEN.values()) + ["klaar"] and groep_rijen(r1["groep"])[0]["label"] == "A",
+          "oude knop A (berichten van vóór vandaag): ja · A, dan optioneel pluspunten")
+    km, a, m = tik(r1["id"], "w", r1["bericht_id"]); km, a, m = tik(r1["id"], "n", r1["bericht_id"])
+    km, a, m = tik(r1["id"], "rmeet", r1["bericht_id"]); km, a, m = tik(r1["id"], "k", r1["bericht_id"])
+    check(teksten(km)[0] == "❌ nee · verkeerd gemeten (sweep/BOS/expansie)", f"reden 'verkeerd gemeten' ({teksten(km)[0] if km else '-'})")
     check(set(alle_methoden) <= {"editMessageReplyMarkup", "answerCallbackQuery"},
           f"alleen hetzelfde bericht aangepast, nooit een nieuw bericht ({sorted(set(alle_methoden))})")
 
@@ -222,6 +233,24 @@ if rijen:
           and regel[kop.index("redenen")] == "Geen goede type 3 shift" and "te vroeg" in regel[kop.index("opmerkingen")],
           "CSV-export: kolommen oordeel, grade, redenen (+ opmerkingen en kenmerken)")
     print("     " + V.telling_tekst(DB).replace("\n", " | "))
+
+# --- 2b. dagbeeld: één vraag per handelsdag vanaf 08:30, één tik, wijzigen kan
+VERSTUURD.clear()
+con.execute("DELETE FROM v3_dagbeeld")
+con.commit()
+cfg_d = dict(cfg, handelsdagen=None, dagbeeld=True, dagbeeld_tijd="08:30")
+dinsdag = V.datetime(2026, 10, 13, 8, 0, tzinfo=V.AMS)
+check(V.dagbeeld_ronde(cfg_d, nu=dinsdag, pad=DB) is None and not VERSTUURD, "08:00: nog geen dagbeeld-vraag")
+mid_d = V.dagbeeld_ronde(cfg_d, nu=dinsdag.replace(minute=31, hour=8), pad=DB)
+check(mid_d and len(VERSTUURD) == 1 and [b["text"] for b in VERSTUURD[0]["knoppen"]["inline_keyboard"][0]] == [t for _, t in V.DAGBEELDEN.values()],
+      "08:31: één vraag met 📈 bullish | 📉 bearish | ↔ range | – geen beeld")
+check(V.dagbeeld_ronde(cfg_d, nu=dinsdag.replace(hour=10), pad=DB) is None and len(VERSTUURD) == 1, "daarna die dag niet nog eens")
+check(V.dagbeeld_ronde(cfg_d, nu=V.datetime(2026, 10, 17, 9, 0, tzinfo=V.AMS), pad=DB) is None, "zaterdag: geen vraag")
+API.clear()
+V.callback(NepBot.cfg(), {"id": "q", "data": "d:2026-10-13:be", "message": {"chat": {"id": 1}, "message_id": mid_d}})
+bd = con.execute("SELECT * FROM v3_dagbeeld WHERE datum='2026-10-13'").fetchone()
+km = [d["reply_markup"]["inline_keyboard"] for m_, d in API if m_ == "editMessageReplyMarkup"]
+check(bd["bias"] == "bearish" and bd["ts"] and km and km[-1][0][1]["text"].startswith("●"), "tik bearish: opgeslagen met tijdstip, knop toont ●")
 
 # --- 3. trades
 VERSTUURD.clear()
