@@ -59,6 +59,8 @@ async function laad() {
   const van = vanDatum(periode);
   const q = van ? "?van=" + van : "";
   document.getElementById("csvLink").href = "/export/signalen.csv" + q;
+  document.getElementById("csvV3Link").href = "/export/v3_signalen.csv" + q;
+  laadV3(q);
   try {
     DATA = await api("/api/signalen/dataset" + q);
   } catch (e) {
@@ -69,6 +71,39 @@ async function laad() {
   renderStat();
   renderFilter();
   renderLijst();
+}
+
+// v3-signalen (8 okt 2026): jouw oordeel uit de getrapte Telegram-knoppen (ja + grade / nee + redenen / niet gezien).
+async function laadV3(q) {
+  const box = document.getElementById("v3Blok");
+  let V;
+  try { V = await api("/api/v3/signalen" + q); }
+  catch (e) { box.innerHTML = ""; return; }                     // journal zonder v3: blok weglaten
+  const t = V.telling || {};
+  const rij = (r) => {
+    const opm = (r.opmerkingen || []).map((o) => `<div class="sg-opm-regel"><span class="ts">${esc(tijdLabel(o.ts))}</span>${esc(o.tekst)}</div>`).join("");
+    const oordeel = r.oordeel ? esc(r.samenvatting) + (r.afgerond ? "" : ' <span class="sg-sub">(nog niet klaar)</span>') : '<span class="sg-sub">open</span>';
+    return `<tr><td>${esc(datumLabel(r.datum))} ${esc(r.tijd || "")}</td><td>${esc((r.trade || "").toUpperCase())}${r.orders > 1 ? ` <span class="sg-sub">(${r.orders} orders)</span>` : ""}</td>
+      <td class="num">${r.entry == null ? "–" : nl(r.entry, 2)}</td><td class="num">${r.sl == null ? "–" : nl(r.sl, 2)}</td>
+      <td>${oordeel}</td><td>${r.grade ? esc(r.grade) : "–"}</td><td>${r.redenen.length ? esc(r.redenen.join(", ")) : "–"}</td><td>${opm || "–"}</td></tr>`;
+  };
+  box.innerHTML = `
+    <div class="panel">
+      <h2>v3-signalen &amp; jouw labels</h2>
+      <p class="sub">Uit Telegram: eerst ✅ ja / ❌ nee / 👀 niet gezien, dan bij ja de grade (A/B/C) en bij nee de reden(en).
+        Eén label per sweep. Antwoord op een v3-bericht = opmerking.</p>
+      <div class="mt-bar">
+        <div class="mt-cell accent"><div class="k">v3-signalen</div><div class="val">${t.signalen || 0}</div></div>
+        <div class="mt-cell"><div class="k">Ja (A / B / C)</div><div class="val">${t.ja || 0} <span class="sg-sub">(${t.A || 0} / ${t.B || 0} / ${t.C || 0})</span></div></div>
+        <div class="mt-cell"><div class="k">Nee</div><div class="val">${t.nee || 0}</div></div>
+        <div class="mt-cell"><div class="k">Niet gezien</div><div class="val">${t.niet_gezien || 0}</div></div>
+        <div class="mt-cell"><div class="k">Nog open</div><div class="val ${t.open ? "neg" : ""}">${t.open || 0}</div></div>
+      </div>
+      <div class="sg-wrap"><table class="sg-stat">
+        <thead><tr><th>Wanneer</th><th>Richting</th><th class="num">Entry</th><th class="num">SL</th><th>Oordeel</th><th>Grade</th><th>Redenen</th><th>Opmerkingen</th></tr></thead>
+        <tbody>${(V.signalen || []).slice(0, 200).map(rij).join("") || '<tr><td colspan="8" class="sg-sub">Nog geen v3-signalen in deze periode.</td></tr>'}</tbody>
+      </table></div>
+    </div>`;
 }
 
 function renderKop() {

@@ -43,8 +43,13 @@ RUNTIME = {
     "match_na_min": 33,          # ... tot 33 min erna (30 candles orderduur + 3)
 }
 
+# 'label' = de samenvatting die het station leest: A/B/C (ja + grade), nee, niet_gezien. Sinds 8 okt 2026 komt hij uit de
+# getrapte knoppen: stap 1 ja / nee / niet gezien, dan bij ja de grade, bij nee de reden(en).
 LABELS = {"a": ("A", "A"), "b": ("B", "B"), "c": ("C", "C"), "n": ("nee", "❌ nee"), "z": ("niet_gezien", "👀 niet gezien")}
 LABEL_CODE = {v[0]: k for k, v in LABELS.items()}
+OORDELEN = {"j": ("ja", "✅ ja"), "n": ("nee", "❌ nee"), "z": ("niet_gezien", "👀 niet gezien")}
+GRADES = ("A", "B", "C")
+REDENEN = {"bos": "Geen goede BOS", "exp": "Geen goede expansie", "t3": "Geen goede type 3 shift", "cons": "Te veel consolidatie"}
 TP_TYPES = {"11": "1:1", "50": "50%", "an": "anders"}
 
 _STATUS = {"melding": "nog niet gestart", "laatste_ronde": None, "fout": None, "verstuurd": 0}
@@ -86,7 +91,34 @@ CREATE INDEX IF NOT EXISTS idx_v3_datum ON v3_labels(datum);
 CREATE TABLE IF NOT EXISTS v3_berichten (
     message_id INTEGER PRIMARY KEY, soort TEXT, ref TEXT, ts TEXT
 );
+CREATE TABLE IF NOT EXISTS v3_opmerkingen (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, groep TEXT, ts TEXT, tekst TEXT, bron TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_v3_opm ON v3_opmerkingen(groep);
 """
+
+# 8 okt 2026: getrapte knoppen. oordeel ja/nee/niet_gezien, grade A/B/C (alleen bij ja), redenen = JSON-lijst van sleutels uit
+# REDENEN (alleen bij nee), afgerond = 1 als je klaar bent. 'label' blijft de samenvatting voor het station.
+V3_KOLOMMEN = {"oordeel": "TEXT", "grade": "TEXT", "redenen": "TEXT", "afgerond": "INTEGER"}
+
+
+def _migreer_v3(con, pad):
+    """Nieuwe kolommen + bestaande antwoorden omzetten: A/B/C -> ja + grade, nee -> nee zonder reden, niet_gezien -> niet_gezien.
+    De eerste keer op de echte database eerst een back-up (backups/). Daarna doet hij niets meer (alleen rijen zonder oordeel)."""
+    aanwezig = {r[1] for r in con.execute("PRAGMA table_info(v3_labels)")}
+    nieuw = [k for k in V3_KOLOMMEN if k not in aanwezig]
+    if nieuw and os.path.abspath(pad) == os.path.abspath(os.path.join(HIER, "cbr_journal.db")):     # alleen de echte, nooit een kopie
+        map_ = os.path.join(HIER, "backups")
+        os.makedirs(map_, exist_ok=True)
+        doel = sqlite3.connect(os.path.join(map_, f"cbr_journal-voor-v3-knoppen-{datetime.now():%Y%m%d-%H%M%S}.db"))
+        con.backup(doel)
+        doel.close()
+    for kol in nieuw:
+        con.execute(f"ALTER TABLE v3_labels ADD COLUMN {kol} {V3_KOLOMMEN[kol]}")
+    con.execute("UPDATE v3_labels SET oordeel='ja', grade=label, redenen='[]', afgerond=1 WHERE oordeel IS NULL AND label IN ('A','B','C')")
+    con.execute("UPDATE v3_labels SET oordeel='nee', grade=NULL, redenen='[]', afgerond=1 WHERE oordeel IS NULL AND label='nee'")
+    con.execute("UPDATE v3_labels SET oordeel='niet_gezien', grade=NULL, redenen='[]', afgerond=1 WHERE oordeel IS NULL AND label='niet_gezien'")
+    con.commit()
 
 # bij elke eigen trade (worden aan 'trades' toegevoegd als ze er nog niet zijn)
 TRADE_KOLOMMEN = {"tp_type": "TEXT", "tp_type_bron": "TEXT", "expansie_begin": "REAL", "expansie_bron": "TEXT",
@@ -109,6 +141,7 @@ def conn(pad=None):
                 con.commit()
         except sqlite3.OperationalError as e:
             print("[v3] kolommen trades:", e)
+        _migreer_v3(con, pad)
         _GEMIGREERD.add(pad)
     return con
 
@@ -139,15 +172,53 @@ def tekst_signaal(r, aantal=1):
               f"TP 1:1 {_p(r['tp_11'])} · 50% {_p(r['tp_50'])} (expansie vanaf {_p(r['begin'])}, {r['begin_tijd']})"]
     if aantal > 1:
         regels.append(f"<i>{aantal} orders bij deze sweep; je label geldt voor allemaal.</i>")
-    regels.append("Zou jij deze nemen? Eén tik. <i>Niet gezien = je keek op dat moment niet.</i>")
+    regels.append("Zou jij deze nemen? Ja → grade · nee → reden(en). <i>Niet gezien = je keek op dat moment niet. "
+                  "Antwoord op dit bericht = opmerking.</i>")
     return "\n".join(regels)
 
 
-def knoppen_signaal(groep_id, label=None):
-    def k(code):
-        waarde, tekst = LABELS[code]
-        return {"text": ("● " if label == waarde else "") + tekst, "callback_data": f"v:{groep_id}:{code}"}
-    return {"inline_keyboard": [[k("a"), k("b"), k("c")], [k("n"), k("z")]]}
+def _redenen(r):
+    try:
+        return [x for x in json.loads(r["redenen"] or "[]") if x in REDENEN]
+    except (ValueError, TypeError, KeyError, IndexError):
+        return []
+
+
+def samenvatting(r):
+    """'✅ ja · B', '❌ nee · geen goede BOS, te veel consolidatie' of '👀 niet gezien'."""
+    o = r["oordeel"]
+    if o == "ja":
+        return "✅ ja" + (f" · {r['grade']}" if r["grade"] else "")
+    if o == "nee":
+        red = [REDENEN[x][0].lower() + REDENEN[x][1:] for x in _redenen(r)]
+        return "❌ nee" + (" · " + ", ".join(red) if red else "")
+    if o == "niet_gezien":
+        return "👀 niet gezien"
+    return "nog geen oordeel"
+
+
+def stap_van(r):
+    """Welke knoppen horen bij deze rij: '1' (ja/nee/niet gezien), 'ja' (grade), 'nee' (redenen) of 'klaar'."""
+    if r is None or not r["oordeel"]:
+        return "1"
+    if r["afgerond"]:
+        return "klaar"
+    return {"ja": "ja", "nee": "nee"}.get(r["oordeel"], "klaar")
+
+
+def knoppen_signaal(groep_id, r=None, stap=None):
+    """Getrapt (8 okt 2026). Hetzelfde bericht, alleen de knoppen wisselen (editMessageReplyMarkup)."""
+    stap = stap or stap_van(r)
+    k = lambda tekst, code: {"text": tekst, "callback_data": f"v:{groep_id}:{code}"}    # noqa: E731
+    if stap == "ja":
+        return {"inline_keyboard": [[k(g, g.lower()) for g in GRADES]]}
+    if stap == "nee":
+        gekozen = _redenen(r) if r is not None else []
+        rijen = [[k(("✓ " if s in gekozen else "") + t, "r" + s)] for s, t in REDENEN.items()]
+        return {"inline_keyboard": rijen + [[k("klaar", "k")]]}
+    if stap == "klaar" and r is not None:
+        return {"inline_keyboard": [[k(samenvatting(r), "i")], [k("↩ wijzig", "w")]]}
+    return {"inline_keyboard": [[k(t, c) for c, (_, t) in OORDELEN.items()]]}
 
 
 # ------------------------------------------------------------------ grafiekje (PNG, Pillow)
@@ -401,19 +472,74 @@ def na_ronde(koppeling):
         print("[v3] ronde:", traceback.format_exc())
 
 
-def zet_label(groep_id, label, bron="telegram", pad=None):
-    """Label op alle kandidaten van dezelfde sweep als kandidaat groep_id."""
-    if label not in LABEL_CODE:
-        raise ValueError(f"onbekend label {label}")
+def zet_stap(groep_id, code, bron="telegram", pad=None):
+    """Eén tik op een signaalknop, voor alle kandidaten van dezelfde sweep. Geeft (rij, stap, korte tekst voor Telegram).
+    j = ja (dan grade), a/b/c = grade (klaar), n = nee (dan redenen), r<sleutel> = reden aan/uit, k = klaar,
+    z = niet gezien (klaar), w = wijzig (terug naar stap 1, nog niets gewist), i = de samenvatting (niets)."""
     with _LOCK:
         con = conn(pad)
         try:
-            r = con.execute("SELECT groep FROM v3_labels WHERE id=?", (int(groep_id),)).fetchone()
+            r = con.execute("SELECT * FROM v3_labels WHERE id=?", (int(groep_id),)).fetchone()
             if r is None:
                 raise ValueError(f"kandidaat {groep_id} bestaat niet")
-            con.execute("UPDATE v3_labels SET label=?, label_ts=?, bron=? WHERE groep=?",
-                        (label, datetime.now().isoformat(timespec="seconds"), bron, r["groep"]))
+            zet, stap, tekst = None, None, None
+            if code == "j":
+                zet, stap, tekst = dict(oordeel="ja", grade=None, label=None, redenen="[]", afgerond=0), "ja", "Ja: kies de grade"
+            elif code in ("a", "b", "c"):
+                g = code.upper()
+                zet, stap, tekst = dict(oordeel="ja", grade=g, label=g, redenen="[]", afgerond=1), "klaar", f"ja · {g} ✓"
+            elif code == "n":
+                zet, stap, tekst = dict(oordeel="nee", grade=None, label="nee", redenen="[]", afgerond=0), "nee", "Nee: kies de reden(en), dan klaar"
+            elif code.startswith("r") and code[1:] in REDENEN:
+                red = _redenen(r) if r["oordeel"] == "nee" else []
+                red = [x for x in red if x != code[1:]] if code[1:] in red else red + [code[1:]]
+                red = [x for x in REDENEN if x in red]                    # vaste volgorde
+                zet, stap, tekst = dict(oordeel="nee", grade=None, label="nee", redenen=json.dumps(red), afgerond=0), "nee", "Reden bijgewerkt"
+            elif code == "k":
+                zet, stap, tekst = dict(afgerond=1), "klaar", "Opgeslagen ✓"
+            elif code == "z":
+                zet, stap, tekst = dict(oordeel="niet_gezien", grade=None, label="niet_gezien", redenen="[]", afgerond=1), "klaar", "Niet gezien ✓"
+            elif code == "w":
+                stap, tekst = "1", "Kies opnieuw"
+            elif code == "i":
+                stap, tekst = stap_van(r), samenvatting(r)
+            else:
+                raise ValueError(f"onbekende knop {code}")
+            if zet:
+                zet.update(label_ts=datetime.now().isoformat(timespec="seconds"), bron=bron)
+                con.execute(f"UPDATE v3_labels SET {', '.join(k + '=?' for k in zet)} WHERE groep=?", list(zet.values()) + [r["groep"]])
+                con.commit()
+                r = con.execute("SELECT * FROM v3_labels WHERE id=?", (int(groep_id),)).fetchone()
+            return r, stap, tekst
+        finally:
+            con.close()
+
+
+def zet_label(groep_id, label, bron="telegram", pad=None):
+    """Een heel label in één keer (A/B/C = ja + grade, nee, niet_gezien), voor alle kandidaten van dezelfde sweep."""
+    if label not in LABEL_CODE:
+        raise ValueError(f"onbekend label {label}")
+    if label in GRADES:
+        return zet_stap(groep_id, label.lower(), bron, pad)[0]
+    r, _, _ = zet_stap(groep_id, "n" if label == "nee" else "z", bron, pad)
+    return zet_stap(groep_id, "k", bron, pad)[0] if label == "nee" else r
+
+
+def voeg_opmerking_toe(groep_id, tekst, bron="telegram", pad=None):
+    """Opmerking bij een v3-signaal (reply op het bericht); geldt voor de hele sweep."""
+    tekst = (tekst or "").strip()
+    if not tekst:
+        raise ValueError("lege opmerking")
+    with _LOCK:
+        con = conn(pad)
+        try:
+            r = con.execute("SELECT * FROM v3_labels WHERE id=?", (int(groep_id),)).fetchone()
+            if r is None:
+                raise ValueError(f"kandidaat {groep_id} bestaat niet")
+            con.execute("INSERT INTO v3_opmerkingen(groep, ts, tekst, bron) VALUES(?,?,?,?)",
+                        (r["groep"], datetime.now().isoformat(timespec="seconds"), tekst[:2000], bron))
             con.commit()
+            return r
         finally:
             con.close()
 
@@ -607,7 +733,8 @@ def zet_trade(tid, tp_type=None, expansie_begin=None, klopt=False, pad=None):
 # ------------------------------------------------------------------ knoppen en antwoorden uit de journal-bot
 
 def callback(c, cb):
-    """'v:{id}:{a|b|c|n|z}' (signaal) of 't:{trade}:{11|50|an|ok}' (eigen trade)."""
+    """'v:{id}:{code}' (signaal, getrapt: zie zet_stap; oude knoppen a/b/c/n/z werken ook) of 't:{trade}:{11|50|an|ok}' (eigen trade).
+    Bij een signaal wisselen alleen de knoppen van hetzelfde bericht (editMessageReplyMarkup), nooit een nieuw bericht."""
     jb = _bot()
     antwoord = "Opgeslagen"
     try:
@@ -615,10 +742,9 @@ def callback(c, cb):
         msg = cb.get("message") or {}
         doel = {"chat_id": msg.get("chat", {}).get("id"), "message_id": msg.get("message_id")}
         if soort == "v":
-            label = LABELS[code][0]
-            zet_label(int(ref), label)
-            jb.api(c["token"], "editMessageReplyMarkup", {**doel, "reply_markup": knoppen_signaal(int(ref), label)})
-            antwoord = f"Label {LABELS[code][1]} ✓"
+            r, stap, antwoord = zet_stap(int(ref), code)
+            if code != "i":
+                jb.api(c["token"], "editMessageReplyMarkup", {**doel, "reply_markup": knoppen_signaal(int(ref), r, stap)})
         else:
             if code == "ok":
                 t = zet_trade(int(ref), klopt=True)
@@ -635,15 +761,23 @@ def callback(c, cb):
 
 
 def antwoord(message_id, tekst, pad=None):
-    """Reply op een v3-trade-bericht met een prijs = het begin van de expansie. Geeft een zin terug, of None als
-    het bericht niet van v3 is (dan doet de journal-bot zijn eigen ding)."""
+    """Reply op een v3-bericht. Signaal: de tekst is een opmerking (zoals bij de gewone signalen). Trade: een prijs = het begin
+    van de expansie. Geeft een zin terug, of None als het bericht niet van v3 is (dan doet de journal-bot zijn eigen ding)."""
     with _LOCK:
         con = conn(pad)
         try:
             r = con.execute("SELECT soort, ref FROM v3_berichten WHERE message_id=?", (int(message_id),)).fetchone()
+            if r is None:                                   # ook berichten van vóór v3_berichten: zoek op bericht_id
+                g = con.execute("SELECT id FROM v3_labels WHERE bericht_id=? ORDER BY id LIMIT 1", (int(message_id),)).fetchone()
+                r = {"soort": "signaal", "ref": g["id"]} if g else None
         finally:
             con.close()
-    if r is None or r["soort"] != "trade":
+    if r is None:
+        return None
+    if r["soort"] == "signaal":
+        s = voeg_opmerking_toe(int(r["ref"]), tekst, pad=pad)
+        return f"📝 Opmerking opgeslagen bij v3-signaal {s['tijd']} {(s['trade'] or '').upper()}."
+    if r["soort"] != "trade":
         return None
     import re
     m = re.search(r"(\d{3,5}(?:[.,]\d+)?)", tekst or "")
@@ -686,3 +820,82 @@ def telling_tekst(pad=None):
                       f"niet gezien {x['niet_gezien']}) · open {x['open']}")
     regels.append(f"<b>14 dagen: {tot} labels, {ab} A/B</b> (doel na 2 weken: 150, waarvan 20 A/B)")
     return "\n".join(regels)
+
+
+# ------------------------------------------------------------------ signalenpagina en CSV (8 okt 2026)
+
+CSV_KOLOMMEN = ["datum", "tijd", "trade", "groep", "orders", "sweep", "entry", "sl", "tp_11", "tp_50", "begin", "sweep_tijd", "bos_tijd",
+                "begin_tijd", "oordeel", "grade", "redenen", "afgerond", "label", "label_ts", "opmerkingen",
+                "exp_atr", "exp_candles", "tussenstukjes", "terug_bij_sweep", "sweep_points", "n_highs", "bos_close", "bos_been_atr",
+                "risico_points", "rr_50", "brak_1h", "minuut_ams", "afstand_dag_extreem_points", "spread"]
+
+
+def overzicht(van=None, tot=None, pad=None):
+    """Eén rij per v3-signaal (sweep): niveaus van de eerste order, je oordeel, grade, redenen, opmerkingen, kenmerken."""
+    con = conn(pad)
+    try:
+        w, p = [], []
+        if van:
+            w.append("datum>=?"); p.append(van)
+        if tot:
+            w.append("datum<=?"); p.append(tot)
+        rijen = con.execute("SELECT * FROM v3_labels" + (" WHERE " + " AND ".join(w) if w else "") + " ORDER BY order_ts, id", p).fetchall()
+        opm = {}
+        for o in con.execute("SELECT groep, ts, tekst FROM v3_opmerkingen ORDER BY id"):
+            opm.setdefault(o["groep"], []).append({"ts": o["ts"], "tekst": o["tekst"]})
+        uit, gezien = [], {}
+        for r in rijen:
+            if r["groep"] in gezien:
+                gezien[r["groep"]]["orders"] += 1
+                continue
+            try:
+                km = json.loads(r["kenmerken"] or "{}")
+            except ValueError:
+                km = {}
+            d = {k: r[k] for k in ("id", "datum", "tijd", "trade", "groep", "sweep", "entry", "sl", "tp_11", "tp_50", "begin",
+                                   "sweep_tijd", "bos_tijd", "begin_tijd", "oordeel", "grade", "afgerond", "label", "label_ts")}
+            d.update(orders=1, redenen=[REDENEN[x] for x in _redenen(r)], samenvatting=samenvatting(r) if r["oordeel"] else None,
+                     verstuurd=r["bericht_id"] is not None, opmerkingen=opm.get(r["groep"], []), kenmerken=km)
+            gezien[r["groep"]] = d
+            uit.append(d)
+        return list(reversed(uit))
+    finally:
+        con.close()
+
+
+def overzicht_csv(van=None, tot=None, pad=None):
+    import csv
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=";")
+    w.writerow(CSV_KOLOMMEN)
+    for d in reversed(overzicht(van, tot, pad)):
+        rij = dict(d, **(d["kenmerken"] or {}))
+        rij["redenen"] = ", ".join(d["redenen"])
+        rij["opmerkingen"] = " | ".join(f"{o['ts'][:16].replace('T', ' ')}: {o['tekst']}" for o in d["opmerkingen"])
+        w.writerow(["" if rij.get(k) is None else rij.get(k) for k in CSV_KOLOMMEN])
+    return "﻿" + buf.getvalue()
+
+
+try:
+    from fastapi import APIRouter
+    from fastapi.responses import Response
+
+    router = APIRouter()
+
+    @router.get("/api/v3/signalen")
+    def api_v3_signalen(van: str = None, tot: str = None):
+        rijen = overzicht(van, tot)
+        tel = {"signalen": len(rijen), "ja": 0, "nee": 0, "niet_gezien": 0, "open": 0, "A": 0, "B": 0, "C": 0}
+        for r in rijen:
+            tel[r["oordeel"] if r["oordeel"] in ("ja", "nee", "niet_gezien") else "open"] += 1
+            if r["grade"] in GRADES:
+                tel[r["grade"]] += 1
+        return {"signalen": rijen, "telling": tel, "redenen": REDENEN}
+
+    @router.get("/export/v3_signalen.csv")
+    def export_v3(van: str = None, tot: str = None):
+        naam = f"cbr-v3-signalen-{datetime.now():%Y%m%d}.csv"
+        return Response(overzicht_csv(van, tot), media_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": f'attachment; filename="{naam}"'})
+except Exception:                                    # pragma: no cover (zonder FastAPI, bv. in tests)
+    router = None

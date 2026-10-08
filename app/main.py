@@ -2023,6 +2023,8 @@ try:
     except Exception as _e:                              # pragma: no cover
         _v3 = None
         print("[journal] v3-labels niet geladen:", _e)
+    if _v3 is not None and _v3.router is not None:
+        app.include_router(_v3.router)                   # /api/v3/signalen en /export/v3_signalen.csv (8 okt 2026)
     _koppeling = _mt5.start_achtergrond()
     if _koppeling is not None:
         def _na_nieuwe_trade(tid):
