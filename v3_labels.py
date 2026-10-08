@@ -49,7 +49,8 @@ LABELS = {"a": ("A", "A"), "b": ("B", "B"), "c": ("C", "C"), "n": ("nee", "❌ n
 LABEL_CODE = {v[0]: k for k, v in LABELS.items()}
 OORDELEN = {"j": ("ja", "✅ ja"), "n": ("nee", "❌ nee"), "z": ("niet_gezien", "👀 niet gezien")}
 GRADES = ("A", "B", "C")
-REDENEN = {"bos": "Geen goede BOS", "exp": "Geen goede expansie", "t3": "Geen goede type 3 shift", "cons": "Te veel consolidatie"}
+REDENEN = {"bos": "Geen goede BOS", "exp": "Geen goede expansie", "t3": "Geen goede type 3 shift", "cons": "Te veel consolidatie",
+           "tp": "TP al gehit voor ik kon enteren"}
 TP_TYPES = {"11": "1:1", "50": "50%", "an": "anders"}
 
 _STATUS = {"melding": "nog niet gestart", "laatste_ronde": None, "fout": None, "verstuurd": 0}
@@ -190,7 +191,7 @@ def samenvatting(r):
     if o == "ja":
         return "✅ ja" + (f" · {r['grade']}" if r["grade"] else "")
     if o == "nee":
-        red = [REDENEN[x][0].lower() + REDENEN[x][1:] for x in _redenen(r)]
+        red = [t if t[:2].isupper() else t[0].lower() + t[1:] for t in (REDENEN[x] for x in _redenen(r))]   # "TP" blijft "TP"
         return "❌ nee" + (" · " + ", ".join(red) if red else "")
     if o == "niet_gezien":
         return "👀 niet gezien"

@@ -78,15 +78,17 @@ ruw.close()
 backups_voor = set(os.listdir(os.path.join(HIER, "backups"))) if os.path.isdir(os.path.join(HIER, "backups")) else set()
 con = V.conn(DB)
 na = {r["sleutel"]: r for r in con.execute("SELECT * FROM v3_labels")}
+al_gemigreerd = "oordeel" in kol_voor             # het echte journal draait de nieuwe code al: dan alleen de samenhang toetsen
 goed = all((na[s]["label"] == l) and (
     (l in ("A", "B", "C") and na[s]["oordeel"] == "ja" and na[s]["grade"] == l) or
-    (l == "nee" and na[s]["oordeel"] == "nee" and na[s]["grade"] is None and json.loads(na[s]["redenen"]) == []) or
+    (l == "nee" and na[s]["oordeel"] == "nee" and na[s]["grade"] is None and (al_gemigreerd or json.loads(na[s]["redenen"]) == [])) or
     (l == "niet_gezien" and na[s]["oordeel"] == "niet_gezien") or
-    (l is None and na[s]["oordeel"] is None)) and (l is None or na[s]["afgerond"] == 1) for s, l in voor.items())
+    (l is None and na[s]["oordeel"] in (None, "ja"))) and (al_gemigreerd or l is None or na[s]["afgerond"] == 1) for s, l in voor.items())
 tel = {}
 for l in voor.values():
     tel[l] = tel.get(l, 0) + 1
-check(bool(voor) and goed, f"migratie van {sum(1 for l in voor.values() if l)} bestaande labels {json.dumps(tel)}: ja + grade / nee / niet_gezien, label gelijk")
+check(bool(voor) and goed, f"{'al gemigreerd, samenhang' if al_gemigreerd else 'migratie'} van {sum(1 for l in voor.values() if l)} labels "
+      f"{json.dumps(tel)}: ja + grade / nee / niet_gezien, label gelijk")
 V._GEMIGREERD.discard(DB)
 V.conn(DB).close()                                  # tweede keer
 na2 = {r["sleutel"]: tuple(r) for r in con.execute("SELECT * FROM v3_labels")}
@@ -172,7 +174,7 @@ if rijen:
     km, a, m = tik(r0["id"], "w", mid); alle_methoden += m
     check(teksten(km) == ["✅ ja", "❌ nee", "👀 niet gezien"], "↩ wijzig -> terug naar stap 1")
     km, a, m = tik(r0["id"], "n", mid); alle_methoden += m
-    check(teksten(km) == [t for t in V.REDENEN.values()] + ["klaar"], "nee -> 4 redenen + klaar")
+    check(teksten(km) == [t for t in V.REDENEN.values()] + ["klaar"], "nee -> %d redenen + klaar" % len(V.REDENEN))
     km, a, m = tik(r0["id"], "rbos", mid); alle_methoden += m
     km, a, m = tik(r0["id"], "rcons", mid); alle_methoden += m
     check(teksten(km)[0] == "✓ Geen goede BOS" and teksten(km)[3] == "✓ Te veel consolidatie" and not teksten(km)[1].startswith("✓"),
@@ -209,6 +211,9 @@ if rijen:
     s0 = next(s for s in d["signalen"] if s["groep"] == g0)
     check(s0["oordeel"] == "niet_gezien" and s0["orders"] == len(per_groep[g0]) and s0["opmerkingen"][0]["tekst"].startswith("te vroeg"),
           f"signalenpagina-API: één rij per sweep met oordeel, grade, redenen, opmerkingen (telling {json.dumps(d['telling'])})")
+    tik(r0["id"], "w", mid); tik(r0["id"], "n", mid); tik(r0["id"], "rtp", mid)
+    km, a, m = tik(r0["id"], "k", mid)
+    check(teksten(km)[0] == "❌ nee · TP al gehit voor ik kon enteren", f"reden 'TP al gehit voor ik kon enteren' ({teksten(km)[0] if km else '-'})")
     tik(r0["id"], "w", mid); tik(r0["id"], "n", mid); tik(r0["id"], "rt3", mid); tik(r0["id"], "k", mid)
     csv_tekst = V.export_v3().body.decode("utf-8-sig")
     kop = csv_tekst.splitlines()[0].split(";")
