@@ -76,6 +76,7 @@ STANDAARD = {
     "bos_op_close": False,         # False = type 3: een wick onder de structuur is genoeg
     "entry_max_candles": 30,       # zo lang ligt de limietorder er
     "sl_marge_points": 1,
+    "lopend": False,               # True = setup al melden bij de BOS terwijl het been nog loopt (live meeschuivende order)
 }
 
 TP_SLEUTELS = ("tp_11", "tp_50", "tp_max")
@@ -166,9 +167,17 @@ def _scan_kant(T, O, H, L, C, c, vanaf):
         leg, k = L[bos], bos + 1                 # BOS-been afmaken
         while k < n and L[k] < leg and H[k] <= sweep:
             leg, k = L[k], k + 1
-        if k >= n - 1 or H[k] > sweep or (sweep_t, k) in gezien:
-            continue                             # been nog niet af (live), de sweep liep door, of dezelfde order al gezien
-        gezien.add((sweep_t, k))                 # zelfde sweep + zelfde einde van het been = dezelfde order
+        lopend_nu = k >= n - 1                   # het been loopt nog (live)
+        if lopend_nu:
+            # 8 okt 2026: met c['lopend'] meldt de detector de setup al bij de BOS (been nog niet af), voor de meeschuivende order
+            # live: die ligt er vanaf de candle na de BOS en schuift mee. Standaard uit: het journal ziet geen verschil.
+            if not c.get("lopend") or (k < n and H[k] > sweep) or (sweep_t, "lopend") in gezien:
+                continue
+            gezien.add((sweep_t, "lopend"))
+        elif H[k] > sweep or (sweep_t, k) in gezien:
+            continue                             # de sweep liep door, of dezelfde order al gezien
+        else:
+            gezien.add((sweep_t, k))             # zelfde sweep + zelfde einde van het been = dezelfde order
         entry = (sweep + leg) / 2
         sl = sweep + c["sl_marge_points"] * punt
         risico = sl - entry
@@ -178,7 +187,8 @@ def _scan_kant(T, O, H, L, C, c, vanaf):
         midden = (begin + sweep) / 2
         tp_11 = entry - risico
         tp_50 = midden if midden < entry else None
-        uit.append({"i_begin": i, "i_geveegd": s_idx, "i_sweep": sweep_t, "i_bos": bos, "i_klaar": k, "i_order": k + 1,
+        uit.append({"i_begin": i, "i_geveegd": s_idx, "i_sweep": sweep_t, "i_bos": bos, "lopend": lopend_nu,
+                    "i_klaar": None if lopend_nu else k, "i_order": bos + 1 if lopend_nu else k + 1,
                     "geveegd": S, "structuur": struct, "sweep": sweep, "bos_laag": leg, "entry": entry, "sl": sl,
                     "risico": risico, "begin": begin, "midden": midden, "tp_11": tp_11, "tp_50": tp_50,
                     "tp_max": tp_11 if tp_50 is None else min(tp_11, tp_50),

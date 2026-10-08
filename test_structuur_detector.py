@@ -78,6 +78,16 @@ def main():
     um = SD.simuleer(N, kn, "tp_11", doorlopend=True)
     check("meeschuivende order (zoals Marijn): gevuld in 43, TP", um["status"] == "tp" and um["fill_tijd"] == N[43][0])
 
+    # 8 okt 2026: 'lopend' (live meeschuivende order): de setup al melden bij de BOS, terwijl het been nog loopt
+    halverwege = B[:43]                                   # t/m candle 42: BOS op 41, been loopt nog (42 maakt een nieuwe low)
+    check("standaard: geen setup zolang het been loopt (journal ongewijzigd)", not SD.kandidaten(halverwege))
+    lp = SD.kandidaten(halverwege, {"lopend": True})
+    check("lopend: setup al bij de BOS, order vanaf de candle erna (42), been tot nu toe",
+          len(lp) == 1 and lp[0]["lopend"] and lp[0]["i_bos"] == 41 and lp[0]["i_order"] == 42 and lp[0]["i_klaar"] is None,
+          [(x["lopend"], x["i_bos"], x["i_order"], x["bos_laag"]) for x in lp])
+    check("lopend en klaar zijn dezelfde setup (zelfde sleutel)", lp and lp[0]["sleutel"] == k["sleutel"])
+    check("met lopend aan blijft de klare setup gelijk", [x["sleutel"] for x in SD.kandidaten(B, {"lopend": True}) if not x["lopend"]] == [k["sleutel"]])
+
     print("\nALLES GOED" if not fouten else "\n%d FOUT(EN)" % len(fouten))
     return 1 if fouten else 0
 
