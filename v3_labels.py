@@ -53,7 +53,7 @@ OORDELEN = {"j": ("ja", "✅ ja"), "n": ("nee", "❌ nee"), "z": ("niet_gezien",
 GRADES = ("A", "B", "C")
 REDENEN = {"bos": "Geen goede BOS", "exp": "Geen goede expansie", "t3": "Geen goede type 3 shift", "cons": "Te veel consolidatie",
            "tp": "TP al gehit voor ik kon enteren", "meet": "Verkeerd gemeten (sweep/BOS/expansie)",
-           "dicht": "Te dichtbij een andere high/low", "liq": "Geen liquidity sweep"}
+           "dicht": "Te dichtbij een andere high/low", "liq": "Geen liquidity sweep", "1h": "1hour high/low not swept"}
 # Optioneel na A/B/C (8 okt 2026): wat maakte hem goed? Leert de bots wat je zoekt, niet alleen wat je afkeurt.
 PLUSPUNTEN = {"sweep": "Mooie sweep (gelijke highs/lows)", "bos": "Sterke BOS / displacement", "lvl": "HTF-level geraakt (1H/4H)",
               "rr": "Goede RR naar het doel"}
