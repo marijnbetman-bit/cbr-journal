@@ -75,9 +75,9 @@ check(len(rp) > 0 and all(0 < v < 100 for v in rp), "risico %% van saldo voor %d
 kw = c.get("/api/game/kwaliteit").json()
 check({"trades", "met_punten", "punten", "sessies"} <= set(kw) and kw["trades"] == len(t["trades"]), "datakwaliteit: %d van %d trades met een punt" % (kw["met_punten"], kw["trades"]))
 check(all(x["sessie"] in kw["sessies"]["groepen"] for x in t["trades"]), "sessienamen samengevoegd tot vaste groepen")
-for f in ("game3.js", "gamereplay.js"):
+for f in ("game3.js", "game4.js", "gamereplay.js"):
     check(c.get("/static/" + f).status_code == 200, "/static/%s bestaat" % f)
-check("game3.js" in p.text, "/game laadt game3.js")
+check("game3.js" in p.text and "game4.js" in p.text, "/game laadt game3.js en game4.js")
 check("gamereplay.js" in c.get("/trade?id=%d" % t["trades"][-1]["id"]).text, "tradepagina laadt de game-replay")
 
 print("5. instap_order (MT5-orderdata, zonder MT5)")

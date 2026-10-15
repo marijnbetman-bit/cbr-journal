@@ -161,3 +161,16 @@ table.g-t tr.klik { cursor: pointer; } table.g-t tr.klik:hover td { background: 
   #g-rapport * { color: #000 !important; background: transparent !important; border-color: #999 !important; text-shadow: none !important; }
   .g-geen-print { display: none !important; }
 }
+
+/* ---- ronde 3 (15 okt): meten hoe je het doet ---- */
+.g-kwadrant { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.g-vak { border: 1px solid; padding: 6px; min-height: 90px; }
+.g-vak .g-kop { font-size: 18px; }
+.g-vakpunten { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+.g-vakpunten .g-chip { font-size: 14px !important; padding: 0 4px; }
+.g-weekscore { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+.g-ws { min-width: 0; }
+.g-ws { border: 1px solid var(--g-dim); padding: 4px 6px; }
+.g-ws .g-kop b { font-weight: normal; font-size: 20px; }
+.g-amber { color: var(--g-amber); }
+@media (max-width: 760px) { .g-weekscore { grid-template-columns: 1fr 1fr; } .g-kwadrant { grid-template-columns: 1fr; } }

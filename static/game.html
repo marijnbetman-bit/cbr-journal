@@ -54,6 +54,42 @@
         <div class="g-chart" style="height:200px"><canvas id="c-instap"></canvas></div><div id="g-instap"></div></section>
     </div>
 
+    <!-- ronde 3: hoe je het doet (proces, voordeel, instap/exit, gedrag) -->
+    <div class="g-grid2">
+      <section class="g-paneel"><div class="g-kop"><h3>PROCESSCORE</h3><span class="g-uitleg" id="g-proces-stand"></span></div>
+        <div class="g-uitleg">Per trade 0-100 op wat jij in de hand hebt: regels, limiet, SL vast, risico volgens plan, in je venster, onder je dagmax, gelogd. Lijn = gemiddelde van de laatste 10.</div>
+        <div class="g-chart" style="height:200px"><canvas id="c-proces"></canvas></div><div id="g-proces"></div></section>
+      <section class="g-paneel"><h3>PROCES TEGEN UITKOMST</h3>
+        <div class="g-uitleg">Goed proces = score 70 of hoger. Het doel: de onderste rij leeg. Klik een trade = replay.</div>
+        <div id="g-kwadrant" class="g-kwadrant"></div></section>
+    </div>
+    <div class="g-grid2">
+      <section class="g-paneel"><h3>IS JE VOORDEEL ECHT</h3>
+        <div class="g-uitleg">R per trade, gemiddeld over je laatste 20 trades, met de band waarbinnen het echte gemiddelde waarschijnlijk ligt (95%). Band helemaal boven 0 = voordeel aangetoond.</div>
+        <div class="g-chart" style="height:220px"><canvas id="c-rollend"></canvas></div><div id="g-rollend"></div></section>
+      <section class="g-paneel"><div class="g-kop"><h3>DE VOLGENDE 50 TRADES</h3><span class="g-seg" id="g-mc-soort"></span></div>
+        <div class="g-uitleg">1000 keer 50 trades getrokken uit je eigen uitkomsten. Lijnen: slecht (5%), matig (25%), midden, goed (75%), heel goed (95%).</div>
+        <div class="g-chart" style="height:220px"><canvas id="c-mc"></canvas></div><div id="g-mc"></div></section>
+    </div>
+    <div class="g-grid2">
+      <section class="g-paneel"><h3>INSTAP TEGEN HET PLAN</h3>
+        <div class="g-uitleg">Jouw entry tegen de limiet die de bots op dezelfde setup legden (het plan-niveau). + = jij stapte slechter in, in R van de plan-stop.</div>
+        <div class="g-chart" style="height:200px"><canvas id="c-planinstap"></canvas></div><div id="g-planinstap"></div></section>
+      <section class="g-paneel"><h3>HOEVEEL VAN DE BEWEGING PAK JE</h3>
+        <div class="g-uitleg">Rechts: hoe ver de trade maximaal in je voordeel ging (MFE, R). Omhoog: wat je eraan overhield. Op de stippellijn = alles gepakt. Oranje = SL/TP aangepast.</div>
+        <div class="g-chart" style="height:220px"><canvas id="c-efficientie"></canvas></div><div id="g-efficientie"></div></section>
+    </div>
+    <div class="g-grid2">
+      <section class="g-paneel"><h3>TILT-METER</h3>
+        <div class="g-uitleg">R per trade naar het hoeveelste van de dag en naar wat de trade ervoor deed.</div>
+        <div class="g-chart" style="height:200px"><canvas id="c-tilt"></canvas></div><div id="g-tilt"></div></section>
+      <section class="g-paneel"><h3>KLOPT JE INSCHATTING</h3>
+        <div class="g-uitleg">Je eigen oordeel (grade, uitvoering, 'opnieuw nemen') tegen wat er echt gebeurde.</div>
+        <div class="g-chart" style="height:200px"><canvas id="c-kalibratie"></canvas></div><div id="g-kalibratie"></div></section>
+    </div>
+    <section class="g-paneel"><div class="g-kop"><h3>WEEKSCORE · LAATSTE 12 WEKEN</h3><span class="g-uitleg">alle trades, los van je filter</span></div>
+      <div id="g-weekscore" class="g-weekscore"></div></section>
+
     <!-- saldo-verloop per X -->
     <section class="g-paneel">
       <div class="g-kop"><h3>SALDOVERLOOP</h3>
@@ -162,5 +198,6 @@
   <script src="/static/game.js"></script>
   <script src="/static/game2.js"></script>
   <script src="/static/game3.js"></script>
+  <script src="/static/game4.js"></script>
 </body>
 </html>
