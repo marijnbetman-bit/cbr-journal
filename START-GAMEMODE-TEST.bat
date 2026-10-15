@@ -18,7 +18,7 @@ if not exist "..\cbr-journal\cbr_journal.db" (
 set PY=..\cbr-journal\.venv\Scripts\python.exe
 echo.
 echo   Verse kopie van je data maken...
-"%PY%" -c "import sqlite3;[ (lambda s,d:(s.backup(d),d.close(),s.close()))(sqlite3.connect('file:../cbr-journal/'+f+'?mode=ro',uri=True),sqlite3.connect(f)) for f in ('cbr_journal.db','marktdata.db','signalen.db')]"
+"%PY%" kopie_testdata.py
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr "127.0.0.1:8011" ^| findstr LISTENING') do taskkill /PID %%p /F >nul 2>&1
 set CBR_GEEN_MT5=1
 echo   Game mode (test) draait op http://127.0.0.1:8011/game
