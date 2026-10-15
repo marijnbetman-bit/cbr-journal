@@ -48,6 +48,10 @@ def r_van_trade(t):
     if risk and risk > 0:
         return netto / risk, "gemeten"
     rr = t.get("rr")
+    if res > 0 and rr and res <= 2 * abs(t.get("charges") or 0):
+        # (bijna) break-even: winst / RR geeft een piepklein risico en kosten / piepklein risico een enorme R
+        # (15 okt 2026: +0,04 bruto, -0,26 kosten, RR 2,79 werd -15R). Dan 0R.
+        return 0.0, "geschat"
     if res > 0 and rr:
         afgeleid_risk = res / rr          # winst / RR = wat je riskeerde
         if afgeleid_risk > 0:

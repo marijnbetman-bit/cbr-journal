@@ -234,9 +234,25 @@ def bepaal_niveaus(pos, order_sl=None, order_tp=None, gezien=None):
     return sl, tp
 
 
-def bereken(pos, sl, tp):
+def per_lot_referentie(con, n=20):
+    """Euro per prijseenheid per lot, uit de laatste trades met een gemeten risico (mediaan). Nodig bij een (bijna)
+    break-even trade: daar is |bruto| / |beweging| onbruikbaar (15 okt 2026: trade #81 kreeg anders geen R, en het
+    journal maakte er -15R van). None als er nog geen bruikbare trades zijn."""
+    try:
+        rijen = con.execute("SELECT risico_eur, entry_prijs, sl_prijs, lot FROM trades WHERE risico_eur > 0 AND lot > 0 "
+                            "AND entry_prijs IS NOT NULL AND sl_prijs IS NOT NULL AND verwijderd_op IS NULL ORDER BY id DESC LIMIT ?",
+                            (n,)).fetchall()
+    except Exception:
+        return None
+    w = sorted(r[0] / (abs(r[1] - r[2]) * r[3]) for r in rijen if abs(r[1] - r[2]) > 0)
+    return w[len(w) // 2] if w else None
+
+
+def bereken(pos, sl, tp, per_lot=None):
     """Afgeleide cijfers. Euro-risico uit de trade zelf (lot en koers zitten
-    er dan al in): euro per prijseenheid = |bruto| / |beweging|."""
+    er dan al in): euro per prijseenheid = |bruto| / |beweging|.
+    Bij een (bijna) break-even trade (beweging < 0,05) kan dat niet: dan uit de lotgrootte x per_lot
+    (per_lot_referentie), zodat ook break-even een echte R krijgt (~0R)."""
     entry, exit_ = pos["entry"], pos["exit"]
     lang = pos["richting"] == "long"
     m = {"sl_afstand_points": None, "tp_afstand_points": None, "rr": None,
@@ -249,12 +265,16 @@ def bereken(pos, sl, tp):
         m["rr"] = round(m["tp_afstand_points"] / m["sl_afstand_points"], 2)
     if exit_ is not None:
         beweging = (exit_ - entry) if lang else (entry - exit_)
+        per_prijs = None
         if sl is not None and abs(beweging) >= 0.05 and pos["bruto"]:
             per_prijs = abs(pos["bruto"]) / abs(beweging)
+        elif sl is not None and per_lot and pos.get("lot"):           # (bijna) break-even: uit de lotgrootte
+            per_prijs = per_lot * float(pos["lot"])
+        if per_prijs:
             risico = round(per_prijs * abs(entry - sl), 2)
             if risico > 0:
                 m["risico_eur"] = risico
-                m["resultaat_r"] = round(pos["bruto"] / risico, 2)
+                m["resultaat_r"] = round((pos["bruto"] or 0) / risico, 2)
     if pos.get("dicht_ts") and pos.get("open_ts"):
         m["duur_minuten"] = max(0, round((pos["dicht_ts"] - pos["open_ts"]) / 60))
     return m
@@ -747,7 +767,7 @@ class Koppeling:
         gezien = con.execute("SELECT * FROM mt5_posities WHERE positie_id=?",
                              (pos["positie_id"],)).fetchone()
         sl, tp = bepaal_niveaus(pos, o_sl, o_tp, dict(gezien) if gezien else None)
-        m = bereken(pos, sl, tp)
+        m = bereken(pos, sl, tp, per_lot_referentie(con))
 
         open_ams = server_naar_amsterdam(pos["open_ts"], offset)
         datum, tijd = open_ams.strftime("%Y-%m-%d"), open_ams.strftime("%H:%M")
@@ -905,3 +925,40 @@ def status(db_pad=None):
     except Exception as e:
         s["db_fout"] = str(e)
     return s
+
+
+def herstel_r(con, alleen_id=None):
+    """15 okt 2026: MT5-trades zonder R (break-even, zoals #81) alsnog een R geven met dezelfde regel als bereken().
+    Alleen trades met tag mt5-auto, prijzen, lot en geen risico_eur/resultaat_r. Geeft [(id, risico_eur, resultaat_r)]."""
+    per_lot = per_lot_referentie(con)
+    sql = ("SELECT id, richting, entry_prijs, exit_prijs, sl_prijs, lot, resultaat_eur FROM trades WHERE resultaat_r IS NULL "
+           "AND (risico_eur IS NULL OR risico_eur = 0) AND tags LIKE '%mt5-auto%' AND entry_prijs IS NOT NULL AND exit_prijs IS NOT NULL "
+           "AND sl_prijs IS NOT NULL AND lot > 0 AND verwijderd_op IS NULL")
+    rijen = con.execute(sql + (" AND id=?" if alleen_id else ""), (alleen_id,) if alleen_id else ()).fetchall()
+    uit = []
+    for r in rijen:
+        pos = {"entry": r[2], "exit": r[3], "richting": r[1], "bruto": r[6] or 0, "lot": r[5]}
+        m = bereken(pos, r[4], None, per_lot)
+        if m["resultaat_r"] is None:
+            continue
+        con.execute("UPDATE trades SET risico_eur=?, resultaat_r=? WHERE id=?", (m["risico_eur"], m["resultaat_r"], r[0]))
+        uit.append((r[0], m["risico_eur"], m["resultaat_r"]))
+    con.commit()
+    return uit
+
+
+if __name__ == "__main__" and len(__import__("sys").argv) > 1 and __import__("sys").argv[1] == "herstel-r":
+    import sqlite3
+    import shutil
+    import time
+    db = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cbr_journal.db")
+    kopie = db + ".bak-voor-herstel-r-" + time.strftime("%Y%m%d-%H%M%S")
+    bron = sqlite3.connect(db)
+    doel = sqlite3.connect(kopie)
+    bron.backup(doel)
+    doel.close()
+    print("back-up:", kopie)
+    for tid, risico, r in herstel_r(bron):
+        print("trade #%d: risico %.2f, R %+.2f" % (tid, risico, r))
+    bron.close()
+
