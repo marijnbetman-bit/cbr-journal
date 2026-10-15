@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="nl" class="game-modus">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CBR Journal · game mode</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+  <link rel="stylesheet" href="/static/gamepagina.css" />
+</head>
+<body>
+  <div id="hoofdnav"></div>
+
+  <!-- HUD: altijd zichtbaar, zoals in de game -->
+  <div id="g-hud"></div>
+
+  <main class="g-wrap">
+    <!-- pixelscène: jij aan je bureau, de teamrace van deze week -->
+    <section class="g-paneel g-scene-paneel">
+      <canvas id="g-scene" width="640" height="132"></canvas>
+      <div class="g-scene-tekst" id="g-scene-tekst"></div>
+    </section>
+
+    <!-- nog te loggen -->
+    <div id="g-teloggen"></div>
+
+    <!-- filters: alles hieronder rekent mee -->
+    <section class="g-paneel g-filters" id="g-filters"></section>
+
+    <!-- kerncijfers (tellen op) -->
+    <section id="g-kpi" class="g-kpis"></section>
+
+    <!-- saldo-verloop per X -->
+    <section class="g-paneel">
+      <div class="g-kop"><h3>SALDOVERLOOP</h3>
+        <div class="g-toggles"><span class="g-lbl">PER</span><span class="g-seg" id="g-per"></span>
+          <span class="g-lbl">IN</span><span class="g-seg" id="g-eenheid"></span></div></div>
+      <div class="g-chart g-chart-hoog"><canvas id="c-saldo"></canvas></div>
+      <div class="g-chart g-chart-laag"><canvas id="c-periode"></canvas></div>
+      <div class="g-uitleg" id="g-saldo-uitleg"></div>
+    </section>
+
+    <!-- ontleed: groeperen op X -->
+    <section class="g-paneel">
+      <div class="g-kop"><h3>ONTLEED JE TRADES</h3>
+        <div class="g-toggles"><span class="g-lbl">GROEPEER OP</span><select id="g-groep"></select>
+          <span class="g-lbl">LAAT ZIEN</span><select id="g-metriek"></select></div></div>
+      <div class="g-grid2">
+        <div class="g-chart"><canvas id="c-ontleed"></canvas></div>
+        <div id="g-ontleed-tabel" class="g-tabelvak"></div>
+      </div>
+      <div class="g-uitleg">Klik op een staaf om op die groep te filteren.</div>
+    </section>
+
+    <div class="g-grid2">
+      <section class="g-paneel"><h3>WEEKDAG × UUR</h3><div class="g-uitleg">R per trade per vakje; klik = filter.</div><div id="g-heat"></div></section>
+      <section class="g-paneel"><h3>HOE VER GING HIJ MEE EN TEGEN</h3><div class="g-uitleg">MFE (rechts) en MAE (omhoog) in R. Groen = winst, rood = verlies. Klik = replay.</div>
+        <div class="g-chart"><canvas id="c-mfe"></canvas></div></section>
+    </div>
+
+    <div class="g-grid2">
+      <section class="g-paneel"><h3>WAT LIET JE LIGGEN</h3><div id="g-liggen"></div></section>
+      <section class="g-paneel"><h3>TRADE-BEHEER (UIT MT5)</h3><div id="g-beheer"></div></section>
+    </div>
+
+    <!-- jij tegen de bots -->
+    <section class="g-paneel" id="g-bots-paneel">
+      <div class="g-kop"><h3>JIJ TEGEN DE BOTS</h3><span class="g-uitleg" id="g-bots-status"></span></div>
+      <div class="g-grid2"><div id="g-bots"></div><div id="g-race"></div></div>
+    </section>
+
+    <div class="g-grid2">
+      <section class="g-paneel"><h3>BADGES</h3><div id="g-badges" class="g-badges"></div></section>
+      <section class="g-paneel"><h3>KALENDER</h3><div id="g-kal"></div></section>
+    </div>
+
+    <section class="g-paneel"><div class="g-kop"><h3>TRADES</h3><span class="g-uitleg">klik op een trade = replay op de candles</span></div>
+      <div id="g-trades"></div></section>
+
+    <p class="g-voet" id="g-voet"></p>
+  </main>
+
+  <!-- replay -->
+  <div id="g-replay" class="g-modal" hidden>
+    <div class="g-modal-doos g-paneel">
+      <div class="g-kop"><h3 id="g-replay-titel">REPLAY</h3>
+        <div class="g-toggles"><button class="g-knop" id="rp-play">▶ AFSPELEN</button><span class="g-seg" id="rp-snel"></span>
+          <button class="g-knop" id="rp-dicht">[ X ]</button></div></div>
+      <canvas id="rp-canvas" width="960" height="380"></canvas>
+      <div class="g-grid2"><div id="rp-info"></div><div id="rp-bots"></div></div>
+    </div>
+  </div>
+
+  <script src="/static/vendor/chart.umd.min.js"></script>
+  <script src="/static/common.js"></script>
+  <script src="/static/game.js"></script>
+</body>
+</html>

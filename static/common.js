@@ -344,11 +344,32 @@ function maakSpraakKnop(veldId, label) {
    dit onderhouden wordt.
    ===================================================================== */
 
+/* ---------- Game mode (journal v2, 15 okt 2026) ----------
+   Net als licht/donker: één schakelaar. Klassiek = de journal zoals hij was; game = dezelfde informatie in de stijl van
+   CBR Station. De keuze staat in de browser (localStorage). Het overzicht in game mode is /game. */
+const GAME = (() => {
+  let aan = false;
+  try { aan = localStorage.getItem("cbr_modus") === "game"; } catch (e) {}
+  if (location.pathname === "/game" && !aan) {               // wie /game opent, kiest game mode
+    aan = true; try { localStorage.setItem("cbr_modus", "game"); } catch (e) {}
+  }
+  if (aan) document.documentElement.classList.add("game-modus");
+  if (aan && location.pathname === "/" && !location.hash) location.replace("/game");
+  function zet(nieuw) {
+    try { localStorage.setItem("cbr_modus", nieuw ? "game" : "klassiek"); } catch (e) {}
+    if (nieuw && location.pathname === "/") return location.assign("/game");
+    if (!nieuw && location.pathname === "/game") return location.assign("/");
+    document.documentElement.classList.toggle("game-modus", nieuw);
+    aan = nieuw;
+  }
+  return { aan: () => aan, zet, home: () => (aan ? "/game" : "/") };
+})();
+
 const NAV = [
   {
     naam: "Journal", icoon: "▤",
     items: [
-      { t: "Home — alles in één", u: () => "/", h: "d", i: "▤" },
+      { t: "Home — alles in één", u: () => GAME.home(), h: "d", i: "▤" },
       { t: "Nog te loggen", u: () => "/#te-loggen", h: "o", i: "✓" },
       { t: "Trading log", u: () => "/log", h: "l", i: "📒" },
       { t: "Kalender", u: () => "/kalender", h: "k", i: "🗓" },
@@ -396,6 +417,7 @@ function navActief(url) {
   const pad = location.pathname;
   const doel = url.split("?")[0];
   if (doel === "/") return pad === "/";
+  if (doel === "/game") return pad === "/game";
   return pad === doel;
 }
 
@@ -422,9 +444,11 @@ function bouwNav() {
 
   gastheer.innerHTML = `
     <div class="nav-binnen">
-      <a class="nav-merk" href="/"><span class="brand-dot">●</span> CBR Journal</a>
+      <a class="nav-merk" href="${GAME.home()}"><span class="brand-dot">●</span> CBR Journal</a>
       <nav class="nav-groepen">${groepen}</nav>
       <div class="nav-rechts">
+        <button type="button" class="nav-modus" id="navModus" title="Wissel tussen de klassieke journal en game mode (stijl van CBR Station)">
+          <span class="pix"></span><span class="tekst">${GAME.aan() ? "KLASSIEK" : "GAME MODE"}</span></button>
         <a class="nav-mt5" id="navMt5" href="/#te-loggen" title="Koppeling met MetaTrader 5">
           <span class="stip"></span><span class="tekst">MT5</span><span class="tel" hidden></span></a>
         <button type="button" class="nav-palet" id="navPalet" title="Commandopalet (Ctrl+K)">
@@ -433,6 +457,14 @@ function bouwNav() {
       </div>
       <button type="button" class="nav-hamburger" id="navHamburger" aria-label="Menu">☰</button>
     </div>`;
+
+  const modusKnop = document.getElementById("navModus");
+  if (modusKnop) modusKnop.addEventListener("click", (e) => {
+    e.stopPropagation();
+    GAME.zet(!GAME.aan());
+    modusKnop.querySelector(".tekst").textContent = GAME.aan() ? "KLASSIEK" : "GAME MODE";
+    const merk = gastheer.querySelector(".nav-merk"); if (merk) merk.href = GAME.home();
+  });
 
   // Openen op klik; hover werkt alleen op een muis, dus klik is de basis.
   let open = null;

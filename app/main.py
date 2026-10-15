@@ -1771,6 +1771,11 @@ def _pagina(naam: str) -> HTMLResponse:
         html = f.read()
     html = re.sub(r'(/static/[\w./-]+\.(?:css|js))"', r'\1?v=' + VERSIE + '"', html)
     html = html.replace("<body", f'<body data-versie="{VERSIE}" data-build="{BUILD}"', 1)
+    # Game mode (journal v2, 15 okt 2026): vóór het tekenen al de juiste stijl, zodat er niets flitst.
+    # Klassiek blijft precies zoals het was; game.css doet alleen iets onder html.game-modus.
+    html = html.replace("</head>", f'<link rel="stylesheet" href="/static/game.css?v={VERSIE}" />'
+                        '<script>try{if(localStorage.getItem("cbr_modus")==="game")'
+                        'document.documentElement.classList.add("game-modus")}catch(e){}</script></head>', 1)
     return HTMLResponse(html, headers={
         "Cache-Control": "no-store, no-cache, must-revalidate",
         "Pragma": "no-cache",
@@ -1840,6 +1845,19 @@ def api_archief():
 @app.get("/")
 def index():
     return _pagina("index.html")
+
+
+@app.get("/game")
+def game_pagina():
+    """Journal v2: het overzicht in game mode (static/game.html + game.js)."""
+    return _pagina("game.html")
+
+
+try:
+    from .game import router as _game_router                   # /api/game/* (alleen lezen)
+    app.include_router(_game_router)
+except Exception as _e:                                        # pragma: no cover
+    print("[journal] game mode niet geladen:", _e)
 
 
 @app.get("/trade")

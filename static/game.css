@@ -1,0 +1,70 @@
+/* =====================================================================
+   GAME MODE (journal v2, 15 okt 2026)
+   Dezelfde journal in de stijl van CBR Station (de game van de agents):
+   groene fosforkleuren, pixelletter VT323, harde pixelranden, scanlines.
+   Alles staat onder html.game-modus: zonder die klasse doet dit bestand
+   niets en blijft de klassieke journal precies zoals hij was.
+   Aan/uit: de knop GAME / KLASSIEK in de navigatie (onthouden in de browser).
+   ===================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+html.game-modus {
+  color-scheme: dark;
+  --bg: #040b06; --bg-alt: #061009; --panel: #07140b; --panel-2: #0a1d10; --panel-3: #0e2716;
+  --border: #124a26; --border-soft: #0e3a1f;
+  --text: #d8ffe6; --text-dim: #a8e6bf; --muted: #6fae86;
+  --green: #3dff8a; --blue: #7fe3ff; --red: #ff5a4f; --amber: #ffb454; --gold: #ffd36b; --plum: #7fe3ff;
+  --c-green: #3dff8a; --c-teal: #7fe3ff; --c-red: #ff5a4f; --c-gold: #ffd36b; --c-plum: #7fe3ff;
+  --radius: 0px; --radius-s: 0px;
+  --shadow: 0 0 0 3px #000, 0 0 22px rgba(61, 255, 138, .12); --shadow-s: none;
+  --op-accent: #02120a; --glans: none; --glow: 0 0 8px rgba(61, 255, 138, .45);
+  --g-hi: #3dff8a; --g-mid: #2fb866; --g-dim: #1f6b3a; --g-line: #124a26; --g-ink: #d8ffe6; --g-amber: #ffb454; --g-gold: #ffd36b; --g-cyan: #7fe3ff; --g-red: #ff5a4f;
+}
+html.game-modus body {
+  background: var(--bg) !important; color: var(--text);
+  font-family: "VT323", "Lucida Console", "Courier New", monospace !important; font-size: 19px; letter-spacing: .3px;
+}
+html.game-modus body * { font-family: inherit !important; }
+html.game-modus .mono, html.game-modus code, html.game-modus kbd { font-family: "VT323", monospace !important; }
+/* scanlines + vignet, zoals de CRT van de game */
+html.game-modus body::after {
+  content: ""; pointer-events: none; position: fixed; inset: 0; z-index: 9999;
+  background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,.18) 3px),
+              radial-gradient(ellipse at center, rgba(0,0,0,0) 60%, rgba(0,0,0,.5) 100%);
+  animation: g-flick 6s infinite steps(1);
+}
+@keyframes g-flick { 0%,100% { opacity: 1 } 47% { opacity: .95 } 48% { opacity: 1 } 73% { opacity: .97 } 74% { opacity: 1 } }
+html.game-modus .panel, html.game-modus .mt-cell, html.game-modus .h2-log, html.game-modus .card, html.game-modus .kaart {
+  border-radius: 0 !important; border: 1px solid var(--border) !important; box-shadow: 0 0 0 2px #000 !important; background: var(--panel) !important;
+}
+html.game-modus h1, html.game-modus h2, html.game-modus h3, html.game-modus .section-title {
+  font-weight: normal !important; letter-spacing: 2px; color: var(--g-hi); text-shadow: 0 0 6px rgba(61,255,138,.35); text-transform: uppercase;
+}
+html.game-modus .btn, html.game-modus button {
+  border-radius: 0 !important; font-size: 18px !important;
+}
+html.game-modus .btn { background: #0a2012 !important; border: 1px solid var(--g-mid) !important; color: var(--g-hi) !important; box-shadow: none !important; }
+html.game-modus .btn:hover { background: #123a20 !important; }
+html.game-modus .btn-primary { background: var(--g-hi) !important; color: #02120a !important; }
+html.game-modus input, html.game-modus select, html.game-modus textarea {
+  background: #020603 !important; color: var(--text) !important; border: 1px solid var(--g-dim) !important; border-radius: 0 !important;
+}
+html.game-modus table.mt th { color: var(--muted) !important; letter-spacing: 1px; }
+html.game-modus table.mt td, html.game-modus table.mt th { border-color: var(--border-soft) !important; }
+html.game-modus table.mt tr:hover td { background: #0a2012 !important; }
+html.game-modus .pos { color: var(--g-hi) !important; } html.game-modus .neg { color: var(--g-red) !important; }
+html.game-modus a { color: var(--g-cyan); }
+/* navigatie */
+html.game-modus #hoofdnav { background: var(--panel) !important; border-bottom: 1px solid var(--border) !important; box-shadow: none !important; }
+html.game-modus .nav-merk { color: var(--g-hi) !important; font-size: 24px; letter-spacing: 2px; text-shadow: var(--glow); }
+html.game-modus .nav-knop, html.game-modus .nav-item { color: var(--text-dim) !important; border-radius: 0 !important; }
+html.game-modus .nav-menu { background: var(--panel) !important; border: 1px solid var(--g-mid) !important; border-radius: 0 !important; box-shadow: 0 0 0 3px #000 !important; }
+/* de schakelaar zelf (zichtbaar in beide modi) */
+.nav-modus { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--border, #ccc); background: transparent;
+  color: inherit; cursor: pointer; font: inherit; border-radius: 8px; white-space: nowrap; }
+.nav-modus .pix { display: inline-block; width: 10px; height: 10px; background: #3dff8a; box-shadow: 0 0 6px #3dff8a; }
+html.game-modus .nav-modus { border-color: var(--g-mid); color: var(--g-hi); border-radius: 0; }
+html.game-modus .nav-modus .pix { background: #d8ffe6; box-shadow: none; }
+/* grade-labels en chips */
+html.game-modus .grade-mini, html.game-modus .h2-chip, html.game-modus .pp-badge { border-radius: 0 !important; }
+html.game-modus .h2-chip.on { background: var(--g-hi) !important; color: #02120a !important; }
