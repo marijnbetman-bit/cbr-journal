@@ -115,8 +115,49 @@ def _trades(conn):
             "zwevend_max_eur": max((e["winst"] for e in events.get(t.get("positie_id"), []) if e.get("winst") is not None), default=None),
             "expansie_begin": t.get("expansie_begin"), "proces_score": t.get("proces_score"),
             "entry": t.get("entry_prijs"), "sl": t.get("sl_prijs"), "tp": t.get("tp_prijs"), "exit_prijs": t.get("exit_prijs"),
+            # 15 okt 2026 (ronde 2): nette sessie, precieze instaptijd, orderdata uit MT5 (slippage)
+            "sessie_ruw": t.get("sessie_markt") or t.get("sessie"), "entry_ts": (events.get(t.get("positie_id")) or [{}])[0].get("ts"),
+            "order_soort": t.get("order_soort"), "order_prijs": t.get("order_prijs"), "slippage_points": t.get("slippage_points"),
         })
+        uit[-1]["sessie"] = _sessie(uit[-1]["sessie_ruw"], uur)
     return uit
+
+
+def _sessie(ruw, uur):
+    """Datakwaliteit (voorstel 12): de vijf varianten ('2e uur Londen', 'Londen open', 'NY open', ...) naar vier groepen.
+    Alleen bij het lezen; wat in de database staat blijft zoals het is."""
+    s = (ruw or "").lower()
+    if "londen" in s or "london" in s:
+        return "Londen"
+    if "new york" in s or "ny" in s.split() or s.startswith("ny"):
+        return "New York"
+    if "azi" in s or "asia" in s:
+        return "Asia"
+    if uur is None:
+        return "onbekend"
+    return "Asia" if uur < 9 else "Londen" if uur < 14 else "New York" if uur < 22 else "Asia"
+
+
+def _bos_tijden(sleutels):
+    """BOS-moment per setup-sleutel ('short-<sweep_ts>-<bos_ts>', UTC) als Amsterdamse tijd, via marktdata.db (ts_utc -> tijd_ams)."""
+    ts = {}
+    for s in sleutels:
+        try:
+            ts[s] = int(s.split("-")[2])
+        except (IndexError, ValueError, AttributeError):
+            pass
+    if not ts or not os.path.exists(MARKT_DB):
+        return {}
+    m = sqlite3.connect("file:%s?mode=ro" % MARKT_DB, uri=True)
+    try:
+        uit = {}
+        for s, t in ts.items():
+            r = m.execute("SELECT tijd_ams FROM candles_m1 WHERE ts_utc=?", (t,)).fetchone()
+            if r:
+                uit[s] = r[0]
+        return uit
+    finally:
+        m.close()
 
 
 @router.get("/api/game/trades")
@@ -125,8 +166,59 @@ def api_trades():
         trades = _trades(conn)
         kas = [dict(r) for r in conn.execute("SELECT datum, tijd, soort, bedrag FROM kasstromen ORDER BY datum, tijd").fetchall()]
         s = db.get_settings(conn)
-    return {"trades": trades, "kasstromen": kas, "startkapitaal": float(s.get("startkapitaal") or 0),
+    start = float(s.get("startkapitaal") or 0)
+    # voorstel 1: risico als % van je saldo op het moment van de trade (start + stortingen + eerdere trades)
+    k, saldo = 0, start
+    kas_s = sorted(kas, key=lambda x: (x["datum"], x["tijd"] or ""))
+    for t in trades:
+        while k < len(kas_s) and (kas_s[k]["datum"], kas_s[k]["tijd"] or "") <= (t["datum"], t["tijd"] or "99"):
+            saldo += kas_s[k]["bedrag"] or 0
+            k += 1
+        t["saldo_voor"] = round(saldo, 2)
+        t["risico_pct"] = round(100 * t["risico_eur"] / saldo, 2) if t.get("risico_eur") and saldo > 0 else None
+        saldo += t["netto"]
+    # voorstel 2: hoeveel minuten na de BOS (candle dicht) je instapte
+    bos = _bos_tijden([t["v3_sleutel"] for t in trades if t.get("v3_sleutel")])
+    for t in trades:
+        t["bos_tijd"], t["instap_na_bos_min"] = None, None
+        b = bos.get(t.get("v3_sleutel"))
+        if not b:
+            continue
+        t["bos_tijd"] = b[11:16]
+        try:
+            bos_dicht = datetime.strptime(b, "%Y-%m-%d %H:%M").timestamp() + 60
+            entry = datetime.fromisoformat(t["entry_ts"]).timestamp() if t.get("entry_ts") else \
+                datetime.strptime("%s %s" % (t["datum"], t["tijd"]), "%Y-%m-%d %H:%M").timestamp() + 30
+            t["instap_na_bos_min"] = round((entry - bos_dicht) / 60, 1)
+        except (TypeError, ValueError):
+            pass
+    return {"trades": trades, "kasstromen": kas, "startkapitaal": start,
             "max_trades_dag": s.get("max_trades_dag"), "venster": [s.get("venster_van"), s.get("venster_tot")]}
+
+
+@router.get("/api/game/kwaliteit")
+def api_kwaliteit():
+    """Voorstel 12: wat er ontbreekt of niet klopt, per trade, met een link om het zelf aan te vullen. Schrijft niets."""
+    with db.get_conn() as conn:
+        trades = _trades(conn)
+    punten = []
+    for t in trades:
+        mis = []
+        if not t["tijd"] or t["uur"] is None:
+            mis.append("geen instaptijd")
+        if t["r_herkomst"] != "gemeten":
+            mis.append("R geschat (geen MT5-R of risico)")
+        if not t.get("sl"):
+            mis.append("geen SL")
+        if t.get("beoordeeld") == 0:
+            mis.append("nog niet gelogd")
+        if t["sessie_ruw"] in (None, "", "-"):
+            mis.append("geen sessie (afgeleid uit het uur: %s)" % t["sessie"])
+        if mis:
+            punten.append({"id": t["id"], "datum": t["datum"], "tijd": t["tijd"], "punten": mis})
+    varianten = sorted({t["sessie_ruw"] or "-" for t in trades})
+    return {"trades": len(trades), "met_punten": len(punten), "punten": punten,
+            "sessies": {"varianten": varianten, "groepen": sorted({t["sessie"] for t in trades})}}
 
 
 @router.get("/api/game/account")
@@ -320,15 +412,17 @@ def api_gemist(dagen: int = 30):
 
 
 TOEGESTAAN = {"teams": "/api/teams", "doelen": "/api/doelen", "vergelijk": "/api/vergelijk", "markt": "/api/markt", "nieuws": "/api/nieuws",
-              "rapporten": "/api/rapporten"}
+              "rapporten": "/api/rapporten", "rapport": "/api/rapporten"}
 
 
 @router.get("/api/game/station/{naam}")
-def api_station(naam: str, van: str = "", tot: str = ""):
+def api_station(naam: str, van: str = "", tot: str = "", id: int = 0):
     """Alleen-lezen doorgeefluik naar CBR Station op deze computer. Station uit = {}: de pagina laat dat deel dan weg."""
     pad = TOEGESTAAN.get(naam)
     if not pad:
         return {"error": "onbekend"}
+    if naam == "rapport":
+        pad = "/api/rapporten/%d" % int(id)
     if naam in ("vergelijk", "nieuws"):
         pad += "?van=%s&tot=%s" % (van[:10], tot[:10])
     try:

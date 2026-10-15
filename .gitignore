@@ -16,3 +16,4 @@ signalen-import/
 Claude outputs/
 _backup-*/
 *.pdf
+.venv/

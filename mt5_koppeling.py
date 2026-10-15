@@ -322,6 +322,8 @@ KOLOMMEN = {
     "check_entry50": "INTEGER", "check_sl": "INTEGER", "schoon": "INTEGER",
     "checks_vooraf": "INTEGER",
     "beoordeeld": "INTEGER",          # 0 = wacht op jouw checks/criteria
+    # 15 okt 2026: met welke order je instapte en de slippage (vulprijs tegen gevraagde prijs; + = slechter voor jou)
+    "order_soort": "TEXT", "order_prijs": "REAL", "slippage_points": "REAL",
 }
 
 TABELLEN = """
@@ -804,6 +806,14 @@ class Koppeling:
                 tp = float(o.tp)
         return sl, tp
 
+    def _instap_order(self, pos):
+        """(soort, gevraagde prijs, slippage in points) van de order waarmee je instapte. Alleen lezen."""
+        try:
+            orders = self.mt5.history_orders_get(position=pos["positie_id"]) or ()
+        except Exception:
+            orders = ()
+        return instap_order(orders, pos, self.mt5)
+
     def _verwerk(self, con, pos, offset, cfg):
         jcfg = lees_journal_config()
         o_sl, o_tp = self._order_niveaus(pos)
@@ -838,6 +848,7 @@ class Koppeling:
             "mfe_points": mfe, "mae_points": mae, "minuut_in_uur": open_ams.minute,
             "dagtype": dagtype(open_ams.date(), jcfg),
         }
+        extra["order_soort"], extra["order_prijs"], extra["slippage_points"] = self._instap_order(pos)
 
         match = zoek_match(con, datum, tijd, pos, cfg)
         if match is not None:
@@ -921,6 +932,54 @@ class Koppeling:
 
     def nu_synchroniseren(self):
         self.wekker.set()
+
+
+ORDER_TYPE_SOORT = {0: "markt", 1: "markt", 2: "limiet", 3: "limiet", 4: "stop", 5: "stop", 6: "stop-limiet", 7: "stop-limiet"}
+
+
+def instap_order(orders, pos, mt5=None):
+    """(soort, gevraagde prijs, slippage in points) van de order waarmee de positie opende.
+    Slippage = vulprijs tegen gevraagde prijs, in jouw points (0,10); + = slechter voor jou. (None, None, None) als onbekend.
+    Marktorders hebben in MT5 geen gevraagde prijs: dan de laatste ask (long) of bid (short) vlak vóór je order (tick-historie)."""
+    if not orders:
+        return None, None, None
+    eigen = [o for o in orders if getattr(o, "ticket", None) == pos.get("order_id")]
+    o = eigen[0] if eigen else sorted(orders, key=lambda x: getattr(x, "time_setup", 0))[0]
+    soort = ORDER_TYPE_SOORT.get(getattr(o, "type", None))
+    prijs = float(getattr(o, "price_open", 0) or 0) or None
+    if prijs is None and soort == "markt" and mt5 is not None and getattr(o, "time_setup_msc", 0):
+        try:
+            msc = int(o.time_setup_msc)
+            ticks = mt5.copy_ticks_range(o.symbol, datetime.fromtimestamp((msc - 5000) / 1000, timezone.utc),
+                                         datetime.fromtimestamp(msc / 1000, timezone.utc), getattr(mt5, "COPY_TICKS_ALL", -1))
+            if ticks is not None and len(ticks):
+                prijs = float(ticks[-1]["ask"] if pos.get("richting") == "long" else ticks[-1]["bid"]) or None
+        except Exception:
+            prijs = None
+    vul = pos.get("entry")
+    if prijs is None or vul is None:
+        return soort, prijs, None
+    slip = (vul - prijs) if pos.get("richting") == "long" else (prijs - vul)
+    return soort, round(prijs, 2), round(slip / POINT, 1)
+
+
+def herstel_orders(con, mt5, offset=0):
+    """15 okt 2026: orderdata (soort, gevraagde prijs, slippage) voor bestaande MT5-trades zonder die gegevens. Alleen lezen uit MT5.
+    Geeft het aantal bijgewerkte trades."""
+    zorg_schema(con)
+    n = 0
+    for t in con.execute("SELECT id, positie_id, richting, entry_prijs FROM trades WHERE positie_id IS NOT NULL AND order_soort IS NULL "
+                         "AND verwijderd_op IS NULL").fetchall():
+        orders = mt5.history_orders_get(position=int(t["positie_id"])) or ()
+        deals = mt5.history_deals_get(position=int(t["positie_id"])) or ()
+        opening = [d for d in deals if getattr(d, "entry", None) == 0]
+        pos = {"order_id": getattr(opening[0], "order", None) if opening else None, "richting": t["richting"], "entry": t["entry_prijs"]}
+        soort, prijs, slip = instap_order(orders, pos, mt5)
+        if soort:
+            con.execute("UPDATE trades SET order_soort=?, order_prijs=?, slippage_points=? WHERE id=?", (soort, prijs, slip, t["id"]))
+            n += 1
+    con.commit()
+    return n
 
 
 def _deal_dict(d):

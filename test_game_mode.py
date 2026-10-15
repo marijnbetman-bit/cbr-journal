@@ -67,6 +67,34 @@ p = c.get("/game")
 check(p.status_code == 200 and "game2.js" in p.text and "game-modus" in p.text, "/game geeft de pagina")
 k = c.get("/").text
 check("index.html" not in k and "homepage.js" in k and 'href="/static/game.css' in k, "klassiek overzicht blijft, game.css alleen als extra laag")
+
+print("4. ronde 2: risico, instap, datakwaliteit, tradepagina")
+check(all({"risico_pct", "saldo_voor", "instap_na_bos_min", "order_soort", "slippage_points"} <= set(x) for x in t["trades"]), "trades hebben risico- en instapvelden")
+rp = [x["risico_pct"] for x in t["trades"] if x["risico_pct"] is not None]
+check(len(rp) > 0 and all(0 < v < 100 for v in rp), "risico %% van saldo voor %d trades (%.2f%% tot %.2f%%)" % (len(rp), min(rp or [0]), max(rp or [0])))
+kw = c.get("/api/game/kwaliteit").json()
+check({"trades", "met_punten", "punten", "sessies"} <= set(kw) and kw["trades"] == len(t["trades"]), "datakwaliteit: %d van %d trades met een punt" % (kw["met_punten"], kw["trades"]))
+check(all(x["sessie"] in kw["sessies"]["groepen"] for x in t["trades"]), "sessienamen samengevoegd tot vaste groepen")
+for f in ("game3.js", "gamereplay.js"):
+    check(c.get("/static/" + f).status_code == 200, "/static/%s bestaat" % f)
+check("game3.js" in p.text, "/game laadt game3.js")
+check("gamereplay.js" in c.get("/trade?id=%d" % t["trades"][-1]["id"]).text, "tradepagina laadt de game-replay")
+
+print("5. instap_order (MT5-orderdata, zonder MT5)")
+import mt5_koppeling as mk  # noqa: E402
+
+
+class O:
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
+
+
+lim = [O(ticket=7, type=2, price_open=4100.0, time_setup=1)]
+check(mk.instap_order(lim, {"order_id": 7, "richting": "long", "entry": 4100.2}) == ("limiet", 4100.0, 2.0), "buy limit: 0,20 slechter = 2 points slippage")
+check(mk.instap_order(lim, {"order_id": 7, "richting": "short", "entry": 4100.2}) == ("limiet", 4100.0, -2.0), "sell limit hoger gevuld = beter (negatief)")
+markt = [O(ticket=8, type=1, price_open=0, time_setup=1, time_setup_msc=0)]
+check(mk.instap_order(markt, {"order_id": 8, "richting": "short", "entry": 4100.0}) == ("markt", None, None), "marktorder zonder ticks: soort bekend, slippage onbekend")
+check(mk.instap_order([], {"order_id": 1}) == (None, None, None), "geen orders: niets")
 shutil.rmtree(tmp, ignore_errors=True)
 
 print("\nALLES GOED" if not fouten else "\n%d FOUT(EN)" % len(fouten))

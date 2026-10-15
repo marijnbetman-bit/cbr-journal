@@ -15,7 +15,7 @@ Chart.defaults.font.family = "VT323, monospace"; Chart.defaults.font.size = 15; 
 Chart.defaults.borderColor = "rgba(18,74,38,.6)";
 Chart.defaults.animation = { duration: 900, easing: "easeOutQuart" };
 
-let ALLE = [], KAS = [], START = 0, BOTS = {}, TEAMS = null, OPEN = [], MT5 = null, SALDO = null, MAXDAG = 2, VENSTER = [];
+let LOGDATA = {}, ALLE = [], KAS = [], START = 0, BOTS = {}, TEAMS = null, OPEN = [], MT5 = null, SALDO = null, MAXDAG = 2, VENSTER = [];
 const F = { periode: "alles", richting: [], sessie: [], grade: [], emotie: [], regels: [], exit: [], tp_type: [], weekdag: [], uur: [], extra: null };
 const W = { per: "trade", eenheid: "eur", groep: "uur", metriek: "r_som" };
 const charts = {};
@@ -35,7 +35,7 @@ async function haal(pad) { const r = await fetch(pad, { cache: "no-store" }); re
 async function boot() {
   const [t, mt5, beo, sal] = await Promise.all([haal("/api/game/trades"), haal("/api/mt5/status").catch(() => null),
     haal("/api/beoordelen").catch(() => ({})), haal("/api/saldo").catch(() => null)]);
-  ALLE = t.trades || []; KAS = t.kasstromen || []; START = t.startkapitaal || 0; MT5 = mt5; OPEN = (beo && beo.open) || []; SALDO = sal;
+  ALLE = t.trades || []; KAS = t.kasstromen || []; START = t.startkapitaal || 0; MT5 = mt5; OPEN = (beo && beo.open) || []; SALDO = sal; LOGDATA = beo || {};
   MAXDAG = +t.max_trades_dag || 2; VENSTER = t.venster || [];
   const nav = document.getElementById("hoofdnav"); if (nav) document.documentElement.style.setProperty("--g-nav-h", nav.offsetHeight + "px");
   const van = ALLE.length ? ALLE[0].datum : vandaagISO();
@@ -131,7 +131,7 @@ function tekenHud() {
     `<span class="vak">WEEK <b class="${som(wk, "r") >= 0 ? "g-pos" : "g-neg"}">${plusR(som(wk, "r"))}</b></span>` +
     `<span class="vak">REEKS <b>${rk.soort === "w" ? "🔥 " + rk.n + "x WIN" : rk.soort === "v" ? rk.n + "x VERLIES" : "-"}</b></span>` +
     `<span class="vak">LEVEL <b>${x.lvl}</b> <span class="xp"><i style="width:${x.pct}%"></i></span> <b>${x.p} XP</b></span>` +
-    (OPEN.length ? `<a class="vak" href="/#te-loggen">! ${OPEN.length} TE LOGGEN</a>` : `<span class="vak">ALLES GELOGD <b>✓</b></span>`) +
+    (OPEN.length ? `<a class="vak" href="#g-teloggen">! ${OPEN.length} TE LOGGEN</a>` : `<span class="vak">ALLES GELOGD <b>✓</b></span>`) +
     (typeof cockpitHtml === "function" ? cockpitHtml() : "");
 }
 function reeks() { let n = 0, s = null; for (let i = ALLE.length - 1; i >= 0; i--) { const w = ALLE[i].r > 0 ? "w" : ALLE[i].r < 0 ? "v" : null; if (!w) continue; if (!s) s = w; if (w !== s) break; n++; } return { soort: s, n }; }
@@ -375,6 +375,7 @@ function tekenTrades(T) {
   document.getElementById("g-trades").onclick = (ev) => { const r = ev.target.closest("tr[data-id]"); if (r) replay(+r.dataset.id); };
 }
 function tekenTeLoggen() {
+  if (typeof tekenLogKaarten === "function") return tekenLogKaarten();          // game3.js: loggen in game mode
   document.getElementById("g-teloggen").innerHTML = OPEN.length ? `<section class="g-paneel g-teloggen"><h3>! NOG TE LOGGEN: ${OPEN.length}</h3>
     <div class="g-uitleg">${OPEN.map((t) => `#${t.id} ${kort(t.datum)} ${esc(t.tijd || "")} ${t.richting === "long" ? "▲" : "▼"}`).join(" · ")} — <a href="/#te-loggen">nu loggen (klassiek scherm) →</a></div></section>` : "";
 }

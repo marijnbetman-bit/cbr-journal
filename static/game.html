@@ -37,6 +37,23 @@
     <!-- kerncijfers (tellen op) -->
     <section id="g-kpi" class="g-kpis"></section>
 
+    <!-- ronde 2: weekfocus en datakwaliteit -->
+    <div class="g-grid2">
+      <section class="g-paneel"><div class="g-kop"><h3>WEEKFOCUS</h3><span class="g-uitleg" id="g-focus-week"></span></div><div id="g-focus"></div></section>
+      <section class="g-paneel"><div class="g-kop"><h3>DATAKWALITEIT</h3><span class="g-uitleg" id="g-kwal-stand"></span></div><div id="g-kwal"></div></section>
+    </div>
+
+    <!-- ronde 2: risico per trade en hoe je instapt -->
+    <div class="g-grid2">
+      <section class="g-paneel"><div class="g-kop"><h3>RISICO PER TRADE</h3>
+          <div class="g-toggles"><span class="g-lbl">PLAN</span><span class="g-seg" id="g-plan-risico"></span></div></div>
+        <div class="g-chart"><canvas id="c-risico"></canvas></div><div id="g-risico"></div>
+        <div class="g-chart" style="height:180px"><canvas id="c-risico-wat"></canvas></div></section>
+      <section class="g-paneel"><h3>HOE JE INSTAPT</h3>
+        <div class="g-uitleg">Minuten na de BOS (candle dicht) tot je entry, marktorder of limiet, en de slippage (uit MT5).</div>
+        <div class="g-chart" style="height:200px"><canvas id="c-instap"></canvas></div><div id="g-instap"></div></section>
+    </div>
+
     <!-- saldo-verloop per X -->
     <section class="g-paneel">
       <div class="g-kop"><h3>SALDOVERLOOP</h3>
@@ -96,7 +113,13 @@
     <section class="g-paneel" id="g-bots-paneel">
       <div class="g-kop"><h3>JIJ TEGEN DE BOTS</h3><span class="g-uitleg" id="g-bots-status"></span></div>
       <div class="g-grid2"><div id="g-bots"></div><div id="g-race"></div></div>
+      <div class="g-lbl" style="margin-top:8px">OPGETELDE R PER DAG: JIJ TEGEN KAMPIOEN EN UITDAGER (zelfde periode)</div>
+      <div class="g-chart"><canvas id="c-botcurve"></canvas></div>
     </section>
+
+    <!-- ronde 2: filters vergelijken -->
+    <section class="g-paneel" id="g-vergelijk-paneel" hidden><div class="g-kop"><h3 id="g-vergelijk-titel">VERGELIJK</h3><button class="g-knop" id="g-vergelijk-dicht">[ X ]</button></div>
+      <div class="g-grid2"><div id="g-vergelijk"></div><div class="g-chart"><canvas id="c-vergelijk"></canvas></div></div></section>
 
     <!-- uit CBR Station: het bedrijf vandaag, de lessen en de doelen -->
     <section class="g-paneel"><div class="g-kop"><h3>UIT CBR STATION</h3><span class="g-uitleg">afdeling Rapportage · lessen · doelen</span></div>
@@ -113,6 +136,16 @@
     <p class="g-voet" id="g-voet"></p>
   </main>
 
+  <!-- ronde 2: week- en maandrapport (afdrukken = pdf) -->
+  <div id="g-rapport" class="g-modal" hidden>
+    <div class="g-modal-doos g-paneel" id="g-rapport-doos">
+      <div class="g-kop"><h3 id="g-rapport-titel">RAPPORT</h3>
+        <div class="g-toggles g-geen-print"><span class="g-seg" id="g-rapport-soort"></span><button class="g-knop" id="g-rapport-vorige">‹</button>
+          <button class="g-knop" id="g-rapport-volgende">›</button><button class="g-knop" id="g-rapport-print">AFDRUKKEN / PDF</button><button class="g-knop" id="g-rapport-dicht">[ X ]</button></div></div>
+      <div id="g-rapport-inhoud"></div>
+    </div>
+  </div>
+
   <!-- replay -->
   <div id="g-replay" class="g-modal" hidden>
     <div class="g-modal-doos g-paneel">
@@ -128,5 +161,6 @@
   <script src="/static/common.js"></script>
   <script src="/static/game.js"></script>
   <script src="/static/game2.js"></script>
+  <script src="/static/game3.js"></script>
 </body>
 </html>

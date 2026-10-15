@@ -139,3 +139,25 @@ table.g-t tr.klik { cursor: pointer; } table.g-t tr.klik:hover td { background: 
   .g-badges { grid-template-columns: repeat(3, 1fr); }
   .g-badge span { display: none; }
 }
+
+/* ---- ronde 2 (15 okt): loggen, focus, vergelijk, rapport ---- */
+.g-logkaart { border: 1px dashed var(--g-dim); padding: 8px; margin: 8px 0; transition: opacity .5s, transform .5s; }
+.g-logkaart.g-weg { opacity: 0; transform: translateX(40px); }
+.g-seg button.aan.nee { background: var(--g-red, #ff5a4f); color: #02120a; }
+.g-les { width: 100%; background: #02120a; color: var(--g-ink); border: 1px solid var(--g-dim); font: inherit; font-size: 18px; padding: 4px; margin: 4px 0; }
+.g-xp-pop { position: fixed; z-index: 90; color: var(--g-gold); font-size: 20px; pointer-events: none; animation: g-xp .9s steps(9) forwards; }
+@keyframes g-xp { from { opacity: 1; transform: translate(-50%, 0) } to { opacity: 0; transform: translate(-50%, -40px) } }
+#g-presets select { background: #061309; color: var(--g-ink); border: 1px solid var(--g-dim); font: inherit; font-size: 17px; }
+#g-hud .vak.knop:hover { background: #2a2208; }
+.g-rapport-kop { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* afdrukken / pdf: alleen het rapport, licht en leesbaar */
+@media print {
+  body.g-print-rapport > *:not(#g-rapport) { display: none !important; }
+  body * { visibility: hidden; }
+  #g-rapport, #g-rapport * { visibility: visible; }
+  #g-rapport { position: absolute; inset: 0; background: #fff !important; display: block !important; }
+  #g-rapport .g-modal-doos { width: 100%; max-height: none; overflow: visible; border: 0; box-shadow: none; background: #fff !important; }
+  #g-rapport * { color: #000 !important; background: transparent !important; border-color: #999 !important; text-shadow: none !important; }
+  .g-geen-print { display: none !important; }
+}

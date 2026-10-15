@@ -68,3 +68,12 @@ html.game-modus .nav-modus .pix { background: #d8ffe6; box-shadow: none; }
 /* grade-labels en chips */
 html.game-modus .grade-mini, html.game-modus .h2-chip, html.game-modus .pp-badge { border-radius: 0 !important; }
 html.game-modus .h2-chip.on { background: var(--g-hi) !important; color: #02120a !important; }
+
+/* tradepagina: replay bovenaan (gamereplay.js, 15 okt) */
+html.game-modus .g-tradereplay { max-width: 1000px; margin: 10px auto; padding: 8px; background: #02120a; border: 2px solid #2fb866; font-family: VT323, monospace; color: #d8ffe6; }
+html.game-modus .g-tradereplay canvas { width: 100%; height: auto; image-rendering: pixelated; border: 1px solid #124a26; }
+html.game-modus .g-tr-kop { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 20px; margin-bottom: 6px; }
+html.game-modus .g-tr-kop button { background: #061309; border: 1px solid #1f6b3a; color: #6fae86; font: inherit; font-size: 17px; cursor: pointer; padding: 0 8px; }
+html.game-modus .g-tr-kop button.aan { background: #3dff8a; color: #02120a; }
+html.game-modus .g-tr-kop a { color: #ffd36b; margin-left: 8px; }
+html.game-modus .g-tr-info { font-size: 17px; color: #6fae86; margin-top: 4px; }

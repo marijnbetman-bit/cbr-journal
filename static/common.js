@@ -370,7 +370,7 @@ const NAV = [
     naam: "Journal", icoon: "▤",
     items: [
       { t: "Home — alles in één", u: () => GAME.home(), h: "d", i: "▤" },
-      { t: "Nog te loggen", u: () => "/#te-loggen", h: "o", i: "✓" },
+      { t: "Nog te loggen", u: () => (GAME.aan() ? "/game#g-teloggen" : "/#te-loggen"), h: "o", i: "✓" },
       { t: "Trading log", u: () => "/log", h: "l", i: "📒" },
       { t: "Kalender", u: () => "/kalender", h: "k", i: "🗓" },
       { t: "Weekrapport + PDF", u: () => "/week", h: "w", i: "📈" },
