@@ -90,6 +90,9 @@ function tekenGemist() {
   document.getElementById("g-gemist-status").textContent = `laatste ${GEMIST.dagen} dagen · venster ${GEMIST.venster.join("-")}` + (GEMIST.station ? "" : " · station niet bereikbaar");
   el.innerHTML = `<div class="g-lbl">SETUPS IN JE VENSTER DIE JE NIET NAM</div>` + (GEMIST.station ? `
     <p style="font-size:20px;margin:4px 0"><b class="g-gold">${G.length}</b> setups · ${gev.length} zouden gevuld zijn · op papier (1:1) <b class="${som >= 0 ? "g-pos" : "g-neg"}">${plusR(som)}</b></p>
+    ${[["model ≥ 50%", (g) => g.kans != null && g.kans >= .5], ["model 30-50%", (g) => g.kans != null && g.kans >= .3 && g.kans < .5], ["model < 30%", (g) => g.kans != null && g.kans < .3]].map(([n, f]) => {
+      const xs = gev.filter(f), r = xs.reduce((s, g) => s + g.r, 0), w = xs.filter((g) => g.r > 0).length;
+      return xs.length ? `<div class="g-balk"><span>${n} (${xs.length})</span><i style="width:${Math.min(45, 3 * Math.abs(r))}%;background:${r >= 0 ? K.hi : K.red}"></i><b>${plusR(r)} · winrate ${Math.round(100 * w / xs.length)}%</b></div>` : ""; }).join("")}
     <div class="g-tabelvak" style="max-height:200px"><table class="g-t"><tr><th>WANNEER</th><th>RICHTING</th><th class="n">KANS</th><th>BOTS</th><th class="n">PAPIER</th></tr>
     ${G.slice().reverse().map((g) => `<tr><td>${kort(g.datum)} ${g.tijd}</td><td>${g.richting === "long" ? "▲" : "▼"}</td><td class="n g-cyan">${g.kans == null ? "-" : Math.round(100 * g.kans) + "%"}</td>
       <td class="g-dim">${esc(Object.values(g.bots).join("/"))}</td><td class="n ${g.r == null ? "g-dim" : g.r >= 0 ? "g-pos" : "g-neg"}">${g.r == null ? esc(g.uitkomst) : plusR(g.r)}</td></tr>`).join("")}</table></div>`
