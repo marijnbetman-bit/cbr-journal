@@ -111,3 +111,31 @@ table.g-t tr.klik { cursor: pointer; } table.g-t tr.klik:hover td { background: 
 /* opbouw-animatie: panelen 'booten' na elkaar */
 .g-boot { animation: g-boot .5s steps(5) both; }
 @keyframes g-boot { from { opacity: 0; transform: translateY(6px); clip-path: inset(0 0 100% 0) } to { opacity: 1; transform: none; clip-path: inset(0 0 0 0) } }
+
+/* banner: level-up, nieuwe badge, winnende trades sinds je vorige bezoek */
+.g-banner { position: fixed; left: 50%; top: 30%; transform: translateX(-50%); z-index: 80; background: #02120a; border: 3px solid var(--g-gold);
+  box-shadow: 0 0 0 4px #000, 0 0 40px rgba(255, 211, 107, .5); color: var(--g-gold); font-size: 34px; letter-spacing: 3px; padding: 12px 28px;
+  text-align: center; animation: g-banner 2.6s steps(13) both; pointer-events: none; }
+@keyframes g-banner { 0% { opacity: 0; transform: translateX(-50%) scale(.6) } 15% { opacity: 1; transform: translateX(-50%) scale(1.08) }
+  25% { transform: translateX(-50%) scale(1) } 85% { opacity: 1 } 100% { opacity: 0; transform: translateX(-50%) translateY(-30px) } }
+#g-boss { width: 100%; height: auto; image-rendering: pixelated; background: #02120a; border: 1px solid var(--border); }
+
+/* 9. telefoonweergave: alles onder elkaar, compacte HUD, kleinere grafieken */
+@media (max-width: 760px) {
+  .g-wrap { padding: 6px 6px 30px; gap: 8px; }
+  .g-grid2 { grid-template-columns: 1fr; }
+  #g-hud { font-size: 15px; padding: 3px 6px; gap: 3px; position: static; }
+  #g-hud .vak { padding: 0 4px; }
+  #g-hud .xp { width: 50px; }
+  .g-kpis { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .g-kpi b { font-size: 22px; } .g-kpi span { font-size: 12px; }
+  .g-chart { height: 190px; } .g-chart-hoog { height: 200px; }
+  .g-frij .g-lbl { min-width: 70px; } .g-chip { font-size: 15px !important; padding: 0 5px; }
+  .g-balk span { flex-basis: 130px; }
+  .g-heat .hc { height: 18px; font-size: 11px; }
+  table.g-t { font-size: 15px; }
+  .g-banner { font-size: 22px; padding: 8px 14px; width: 86vw; }
+  .g-modal-doos { width: 100vw; max-height: 100vh; }
+  .g-badges { grid-template-columns: repeat(3, 1fr); }
+  .g-badge span { display: none; }
+}

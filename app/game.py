@@ -106,6 +106,14 @@ def _trades(conn):
             "fouten": fouten, "les": t.get("les"), "v3_sleutel": t.get("v3_sleutel"), "signaal": bool(t.get("signaal_id")),
             "beoordeeld": t.get("beoordeeld"), "chart": shots.get(t["id"]),
             "sl_moves": b.get("sl_moves"), "tp_moves": b.get("tp_moves"), "be_min": b.get("be_min"), "sl_verruimd": b.get("sl_verruimd"),
+            # voorstel 6: kosten en spread in R; voorstel 8: diepste zwevende stand tijdens de trade (uit de MT5-ticks)
+            "risico_eur": t.get("risico_eur") or t.get("risk_eur"),
+            "kosten_r": round(-(t.get("charges") or 0) / (t.get("risico_eur") or t.get("risk_eur")), 3) if (t.get("risico_eur") or t.get("risk_eur")) else None,
+            # spread_entry staat in MT5-punten (0,01), sl_afstand_points in jouw points (0,10)
+            "spread_r": round((t.get("spread_entry") or 0) * 0.01 / (slp * POINT), 3) if slp and t.get("spread_entry") else None,
+            "zwevend_min_eur": min((e["winst"] for e in events.get(t.get("positie_id"), []) if e.get("winst") is not None), default=None),
+            "zwevend_max_eur": max((e["winst"] for e in events.get(t.get("positie_id"), []) if e.get("winst") is not None), default=None),
+            "expansie_begin": t.get("expansie_begin"), "proces_score": t.get("proces_score"),
             "entry": t.get("entry_prijs"), "sl": t.get("sl_prijs"), "tp": t.get("tp_prijs"), "exit_prijs": t.get("exit_prijs"),
         })
     return uit
@@ -155,7 +163,164 @@ def api_replay(tid: int, voor: int = 45, na: int = 20):
             "candles": candles, "events": [e for e in ev if e["soort"] != "tick"], "pad": _beheer(ev, t).get("pad", [])}
 
 
-TOEGESTAAN = {"teams": "/api/teams", "doelen": "/api/doelen", "vergelijk": "/api/vergelijk"}
+# ------------------------------------------------------------------ simulaties op de candles (voorstellen 1-3)
+# Regel bij twijfel: raakt één candle zowel SL als TP, dan telt de SL (voorzichtig). Horizon: tot 240 min na de entry.
+
+def _candles_per_dag(datums):
+    if not os.path.exists(MARKT_DB) or not datums:
+        return {}
+    m = sqlite3.connect("file:%s?mode=ro" % MARKT_DB, uri=True)
+    uit = {}
+    try:
+        for d in sorted(set(datums)):
+            uit[d] = [tuple(r) for r in m.execute("SELECT tijd_ams, ts_utc, h, l, c FROM candles_m1 WHERE tijd_ams BETWEEN ? AND ? ORDER BY ts_utc",
+                                                  (d + " 00:00", d + " 23:59"))]
+    finally:
+        m.close()
+    return uit
+
+
+def sim(candles, i0, short, entry, sl, tp, be_bij_r=None, horizon=240):
+    """(r, uitkomst, minuten). Vanaf candle i0 (de entry-minuut, inclusief). be_bij_r: SL naar entry zodra +be_bij_r R."""
+    risico = abs(entry - sl)
+    if not risico or i0 is None:
+        return None, "geen data", None
+    stop = sl
+    for j in range(i0, min(len(candles), i0 + horizon)):
+        _, _, h, l, c = candles[j]
+        geraakt_sl = (h >= stop) if short else (l <= stop)
+        geraakt_tp = tp is not None and ((l <= tp) if short else (h >= tp))
+        if geraakt_sl:
+            return round(((entry - stop) if short else (stop - entry)) / risico, 2), ("BE" if stop == entry else "SL"), j - i0
+        if geraakt_tp:
+            return round(abs(tp - entry) / risico, 2), "TP", j - i0
+        if be_bij_r and stop != entry and (((entry - l) if short else (h - entry)) >= be_bij_r * risico):
+            stop = entry
+    if i0 + 1 >= len(candles):
+        return None, "geen data", None
+    c = candles[min(len(candles), i0 + horizon) - 1][4]
+    return round(((entry - c) if short else (c - entry)) / risico, 2), "open", horizon
+
+
+def _index(candles, hhmm, datum):
+    sleutel = "%s %s" % (datum, hhmm)
+    for j, c in enumerate(candles):
+        if c[0] >= sleutel:
+            return j
+    return None
+
+
+@router.get("/api/game/simulatie")
+def api_simulatie():
+    """1. wat als je niets had aangeraakt (plan-SL/TP vanaf de entry) en 2. exit-varianten met je oorspronkelijke SL."""
+    with db.get_conn() as conn:
+        trades = _trades(conn)
+        extra = {r["id"]: dict(r) for r in conn.execute("SELECT id, sl_start, tp_start, expansie_begin FROM trades")}
+    C = _candles_per_dag([t["datum"] for t in trades])
+    VAR = [("1R", 1.0), ("1,5R", 1.5), ("2R", 2.0), ("3R", 3.0)]
+    uit, tot = [], {"plan": 0.0, "echt": 0.0, "n": 0, "var": {}}
+    for t in trades:
+        cs, e = C.get(t["datum"]) or [], extra.get(t["id"], {})
+        entry, short = t.get("entry"), t.get("richting") == "short"
+        sl, tp = e.get("sl_start") or t.get("sl"), e.get("tp_start") or t.get("tp")
+        if not (cs and entry and sl):
+            continue
+        i0 = _index(cs, t["tijd"], t["datum"])
+        if i0 is None:
+            continue
+        risico = abs(entry - sl)
+        plan = sim(cs, i0, short, entry, sl, tp)
+        if plan[0] is None:
+            continue
+        rij = {"id": t["id"], "datum": t["datum"], "tijd": t["tijd"], "richting": t["richting"], "r": t["r"], "plan_r": plan[0], "plan_uitkomst": plan[1],
+               "plan_min": plan[2], "delta": round(t["r"] - plan[0], 2), "var": {}}
+        for naam, mult in VAR:
+            doel = entry - mult * risico if short else entry + mult * risico
+            rij["var"][naam] = sim(cs, i0, short, entry, sl, doel)[0]
+        rij["var"]["BE na 1R, TP 3R"] = sim(cs, i0, short, entry, sl, entry - 3 * risico if short else entry + 3 * risico, be_bij_r=1.0)[0]
+        if e.get("expansie_begin"):
+            top = sl + (-0.1 if short else 0.1)                         # SL staat 1 point voorbij de sweep
+            half = (e["expansie_begin"] + top) / 2
+            if (half < entry) if short else (half > entry):
+                rij["var"]["50% expansie"] = sim(cs, i0, short, entry, sl, half)[0]
+        uit.append(rij)
+        tot["plan"] += plan[0]; tot["echt"] += t["r"]; tot["n"] += 1
+        for k, v in rij["var"].items():
+            if v is not None:
+                x = tot["var"].setdefault(k, {"r": 0.0, "n": 0, "w": 0}); x["r"] += v; x["n"] += 1; x["w"] += v > 0
+    for x in tot["var"].values():
+        x["r"] = round(x["r"], 2)
+    tot["plan"], tot["echt"] = round(tot["plan"], 2), round(tot["echt"], 2)
+    return {"trades": uit, "totaal": tot, "regel": "Plan = je eerste SL en TP vanaf de entry-minuut, niets aangeraakt. Raakt één candle SL én TP, dan telt de SL. "
+            "Na 240 min zonder SL/TP: afgerekend op de slotkoers."}
+
+
+@router.get("/api/game/gemist")
+def api_gemist(dagen: int = 30):
+    """3. Setups die de bots in jouw venster zagen en die jij niet nam (met de afloop op 1:1), trades zonder setup, en je niet-gevulde orders."""
+    from datetime import timedelta, timezone
+    with db.get_conn() as conn:
+        s = db.get_settings(conn)
+        trades = _trades(conn)
+        try:
+            orders = [dict(r) for r in conn.execute("SELECT * FROM mt5_orders WHERE geplaatst >= date('now', ?) ORDER BY geplaatst",
+                                                    ("-%d day" % dagen,))]
+        except sqlite3.Error:
+            orders = []
+    venster = (s.get("venster_van") or "09:00", s.get("venster_tot") or "15:00")
+    van = (datetime.now() - timedelta(days=dagen)).strftime("%Y-%m-%d")
+    v = api_station("vergelijk", van, datetime.now().strftime("%Y-%m-%d"))
+    setups = (v or {}).get("setups") or {}
+    genomen = {t["v3_sleutel"] for t in trades if t.get("v3_sleutel")}
+    kand = []
+    for sleutel, teams in setups.items():
+        b = teams.get("uitdager") or teams.get("kampioen")
+        if not b or not b.get("entry") or not b.get("sl") or not b.get("besloten"):
+            continue
+        t_utc = datetime.fromisoformat(b["besloten"][:19]).replace(tzinfo=timezone.utc)
+        kand.append((sleutel, b, int(t_utc.timestamp())))
+    C = {}
+    if kand and os.path.exists(MARKT_DB):
+        m = sqlite3.connect("file:%s?mode=ro" % MARKT_DB, uri=True)
+        try:
+            for sleutel, b, ts in kand:
+                C[sleutel] = [tuple(r) for r in m.execute("SELECT tijd_ams, ts_utc, h, l, c FROM candles_m1 WHERE ts_utc BETWEEN ? AND ? ORDER BY ts_utc",
+                                                          (ts - 60, ts + 300 * 60))]
+        finally:
+            m.close()
+    gemist = []
+    for sleutel, b, ts in kand:
+        cs = C.get(sleutel) or []
+        if not cs:
+            continue
+        tijd = cs[0][0][11:16]
+        if not (venster[0] <= tijd < venster[1]) or sleutel in genomen:
+            continue
+        short = sleutel.startswith("short")
+        entry, sl = b["entry"], b["sl"]
+        tp = entry - abs(entry - sl) if short else entry + abs(entry - sl)
+        vul = next((j for j, c in enumerate(cs[:31]) if ((c[2] >= entry) if short else (c[3] <= entry))), None)   # limiet: binnen 30 min gevuld?
+        uitkomst = sim(cs, vul, short, entry, sl, tp) if vul is not None else (None, "niet gevuld", None)
+        gemist.append({"sleutel": sleutel, "datum": cs[0][0][:10], "tijd": tijd, "richting": "short" if short else "long", "entry": entry, "sl": sl,
+                       "bots": {k: x["status"] for k, x in setups[sleutel].items()}, "kans": b.get("kans"), "r": uitkomst[0], "uitkomst": uitkomst[1]})
+    sinds = min((t["datum"] for t in trades if t.get("v3_sleutel")), default=None)      # de koppeling met setups bestaat pas sinds dan
+    zonder = [{"id": t["id"], "datum": t["datum"], "tijd": t["tijd"], "r": t["r"]} for t in trades
+              if not t.get("v3_sleutel") and sinds and t["datum"] >= max(van, sinds)]
+    # niet-gevulde orders: binnen 3 min gevolgd door een trade in dezelfde richting = 'limiet weggehaald en toch ingestapt'
+    for o in orders:
+        o["gevolgd_door"] = None
+        for t in trades:
+            if t["datum"] == (o["geplaatst"] or "")[:10] and t["richting"] == o["richting"] and t["tijd"] and o["klaar"]:
+                dt = (datetime.strptime(t["datum"] + " " + t["tijd"], "%Y-%m-%d %H:%M") - datetime.strptime(o["klaar"], "%Y-%m-%d %H:%M")).total_seconds() / 60
+                if 0 <= dt <= 3:
+                    o["gevolgd_door"] = {"id": t["id"], "entry": t["entry"], "r": t["r"],
+                                         "verschil_points": round(((t["entry"] - o["prijs"]) if t["richting"] == "long" else (o["prijs"] - t["entry"])) / POINT, 1) if t["entry"] and o["prijs"] else None}
+                    break
+    return {"venster": venster, "dagen": dagen, "station": not (v or {}).get("error"), "gemist": gemist, "zonder_setup": zonder, "orders": orders}
+
+
+TOEGESTAAN = {"teams": "/api/teams", "doelen": "/api/doelen", "vergelijk": "/api/vergelijk", "markt": "/api/markt", "nieuws": "/api/nieuws",
+              "rapporten": "/api/rapporten"}
 
 
 @router.get("/api/game/station/{naam}")
@@ -164,7 +329,7 @@ def api_station(naam: str, van: str = "", tot: str = ""):
     pad = TOEGESTAAN.get(naam)
     if not pad:
         return {"error": "onbekend"}
-    if naam == "vergelijk":
+    if naam in ("vergelijk", "nieuws"):
         pad += "?van=%s&tot=%s" % (van[:10], tot[:10])
     try:
         with urllib.request.urlopen(STATION + pad, timeout=3) as r:

@@ -21,6 +21,13 @@
       <div class="g-scene-tekst" id="g-scene-tekst"></div>
     </section>
 
+    <!-- speels met een doel: quests van vandaag + de bossfight van deze maand -->
+    <div class="g-grid2">
+      <section class="g-paneel"><div class="g-kop"><h3>QUESTS VAN VANDAAG</h3><span class="g-uitleg" id="g-quest-xp"></span></div><div id="g-quests"></div></section>
+      <section class="g-paneel"><div class="g-kop"><h3 id="g-boss-titel">BOSSFIGHT</h3><button class="g-knop" id="g-boss-instel" title="doel en budget aanpassen">⚙</button></div>
+        <canvas id="g-boss" width="420" height="90"></canvas><div id="g-boss-tekst" class="g-uitleg"></div></section>
+    </div>
+
     <!-- nog te loggen -->
     <div id="g-teloggen"></div>
 
@@ -63,11 +70,37 @@
       <section class="g-paneel"><h3>TRADE-BEHEER (UIT MT5)</h3><div id="g-beheer"></div></section>
     </div>
 
+    <!-- voorstel 1 + 2: wat als je niets had aangeraakt, en welke exit past bij jou -->
+    <div class="g-grid2">
+      <section class="g-paneel"><h3>WAT ALS JE NIETS HAD AANGERAAKT</h3>
+        <div class="g-uitleg">Je eerste SL en TP vanaf de entry-minuut, zonder BE, verruimen of handmatig sluiten. Groen = jouw beheer leverde op, rood = het kostte.</div>
+        <div id="g-watals"></div></section>
+      <section class="g-paneel"><h3>EXIT-SIMULATOR</h3>
+        <div class="g-uitleg">Dezelfde trades, je eigen SL, alleen een ander doel. Hoeveel R had elke vaste regel opgeleverd?</div>
+        <div class="g-chart"><canvas id="c-exits"></canvas></div><div id="g-exits-tekst" class="g-uitleg"></div></section>
+    </div>
+
+    <!-- voorstel 3: gemiste kansen, trades zonder setup, limietorders die nooit gevuld werden -->
+    <section class="g-paneel"><div class="g-kop"><h3>GEMISTE KANSEN EN AFGEBLAZEN ORDERS</h3><span class="g-uitleg" id="g-gemist-status"></span></div>
+      <div class="g-grid2"><div id="g-gemist"></div><div id="g-orders"></div></div></section>
+
+    <!-- voorstel 6, 7, 8: kosten en spread in R, nieuws, zwevend -->
+    <div class="g-grid2">
+      <section class="g-paneel"><h3>ZWEVEND: HOE DIEP ZAT JE ECHT</h3>
+        <div class="g-uitleg">Balans en equity uit MT5 (30 dagen) en per trade het diepste zwevende verlies.</div>
+        <div class="g-chart"><canvas id="c-equity"></canvas></div><div id="g-zwevend"></div></section>
+      <section class="g-paneel"><h3>KOSTEN, SPREAD EN NIEUWS</h3><div id="g-kosten"></div><div id="g-nieuws"></div></section>
+    </div>
+
     <!-- jij tegen de bots -->
     <section class="g-paneel" id="g-bots-paneel">
       <div class="g-kop"><h3>JIJ TEGEN DE BOTS</h3><span class="g-uitleg" id="g-bots-status"></span></div>
       <div class="g-grid2"><div id="g-bots"></div><div id="g-race"></div></div>
     </section>
+
+    <!-- uit CBR Station: het bedrijf vandaag, de lessen en de doelen -->
+    <section class="g-paneel"><div class="g-kop"><h3>UIT CBR STATION</h3><span class="g-uitleg">afdeling Rapportage · lessen · doelen</span></div>
+      <div class="g-grid2"><div id="g-station-rapport"></div><div id="g-station-doelen"></div></div></section>
 
     <div class="g-grid2">
       <section class="g-paneel"><h3>BADGES</h3><div id="g-badges" class="g-badges"></div></section>
@@ -94,5 +127,6 @@
   <script src="/static/vendor/chart.umd.min.js"></script>
   <script src="/static/common.js"></script>
   <script src="/static/game.js"></script>
+  <script src="/static/game2.js"></script>
 </body>
 </html>

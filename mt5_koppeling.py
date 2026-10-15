@@ -342,7 +342,24 @@ CREATE TABLE IF NOT EXISTS mt5_posities (
     eerst_gezien  TEXT,
     laatst_gezien TEXT
 );
+-- journal v2 (15 okt 2026): limiet-/stoporders die NIET gevuld werden (geannuleerd of verlopen). Alleen lezen uit MT5.
+CREATE TABLE IF NOT EXISTS mt5_orders (
+    ticket      INTEGER PRIMARY KEY,
+    symbool     TEXT,
+    soort       TEXT,                 -- buy_limit | sell_limit | buy_stop | sell_stop
+    richting    TEXT,                 -- long | short
+    prijs       REAL,
+    sl          REAL,
+    tp          REAL,
+    volume      REAL,
+    geplaatst   TEXT,                 -- Amsterdamse tijd 'YYYY-MM-DD HH:MM'
+    klaar       TEXT,
+    status      TEXT,                 -- geannuleerd | verlopen | geweigerd
+    duur_min    REAL
+);
 """
+ORDER_SOORT = {2: ("buy_limit", "long"), 3: ("sell_limit", "short"), 4: ("buy_stop", "long"), 5: ("sell_stop", "short")}
+ORDER_STATUS = {2: "geannuleerd", 5: "geweigerd", 6: "verlopen"}
 
 
 def verbind_db(pad=None):
@@ -654,6 +671,11 @@ class Koppeling:
             con.commit()
             self._saldo(con, deals, acc, offset, vanaf, cfg)
             con.commit()
+            try:                                         # journal v2: niet-gevulde orders (nooit fataal)
+                self._niet_gevuld(con, van, tot, bevat, offset)
+                con.commit()
+            except Exception as e:
+                log(f"niet-gevulde orders: {e}")
         finally:
             con.close()
 
@@ -678,6 +700,27 @@ class Koppeling:
                     except Exception as e:
                         log(f"melding voor trade #{tid} mislukt: {e}")
         return nieuw_ids
+
+    def _niet_gevuld(self, con, van, tot, bevat, offset):
+        """Limiet- en stoporders die eindigden zonder vulling (geannuleerd, verlopen, geweigerd). Alleen lezen."""
+        orders = self.mt5.history_orders_get(van, tot) or ()
+        for o in orders:
+            soort = ORDER_SOORT.get(getattr(o, "type", None))
+            status = ORDER_STATUS.get(getattr(o, "state", None))
+            if not soort or not status or getattr(o, "position_id", 0):
+                continue
+            sym = getattr(o, "symbol", "") or ""
+            if bevat and bevat not in sym.upper():
+                continue
+            gezet, klaar = getattr(o, "time_setup", 0), getattr(o, "time_done", 0)
+            con.execute("INSERT OR REPLACE INTO mt5_orders(ticket, symbool, soort, richting, prijs, sl, tp, volume, geplaatst, klaar, status, duur_min) "
+                        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+                        (int(o.ticket), sym, soort[0], soort[1], float(getattr(o, "price_open", 0) or 0) or None,
+                         float(getattr(o, "sl", 0) or 0) or None, float(getattr(o, "tp", 0) or 0) or None,
+                         float(getattr(o, "volume_initial", 0) or 0),
+                         server_naar_amsterdam(gezet, offset).strftime("%Y-%m-%d %H:%M") if gezet else None,
+                         server_naar_amsterdam(klaar, offset).strftime("%Y-%m-%d %H:%M") if klaar else None,
+                         status, round((klaar - gezet) / 60, 1) if gezet and klaar else None))
 
     def _saldo(self, con, deals, acc, offset, vanaf, cfg):
         """v2: stortingen/opnames uit MT5 + het journal-saldo gelijk aan MT5."""

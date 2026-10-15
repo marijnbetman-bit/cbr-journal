@@ -15,7 +15,7 @@ Chart.defaults.font.family = "VT323, monospace"; Chart.defaults.font.size = 15; 
 Chart.defaults.borderColor = "rgba(18,74,38,.6)";
 Chart.defaults.animation = { duration: 900, easing: "easeOutQuart" };
 
-let ALLE = [], KAS = [], START = 0, BOTS = {}, TEAMS = null, OPEN = [], MT5 = null, SALDO = null, MAXDAG = 2;
+let ALLE = [], KAS = [], START = 0, BOTS = {}, TEAMS = null, OPEN = [], MT5 = null, SALDO = null, MAXDAG = 2, VENSTER = [];
 const F = { periode: "alles", richting: [], sessie: [], grade: [], emotie: [], regels: [], exit: [], tp_type: [], weekdag: [], uur: [], extra: null };
 const W = { per: "trade", eenheid: "eur", groep: "uur", metriek: "r_som" };
 const charts = {};
@@ -36,7 +36,7 @@ async function boot() {
   const [t, mt5, beo, sal] = await Promise.all([haal("/api/game/trades"), haal("/api/mt5/status").catch(() => null),
     haal("/api/beoordelen").catch(() => ({})), haal("/api/saldo").catch(() => null)]);
   ALLE = t.trades || []; KAS = t.kasstromen || []; START = t.startkapitaal || 0; MT5 = mt5; OPEN = (beo && beo.open) || []; SALDO = sal;
-  MAXDAG = +t.max_trades_dag || 2;
+  MAXDAG = +t.max_trades_dag || 2; VENSTER = t.venster || [];
   const nav = document.getElementById("hoofdnav"); if (nav) document.documentElement.style.setProperty("--g-nav-h", nav.offsetHeight + "px");
   const van = ALLE.length ? ALLE[0].datum : vandaagISO();
   haal("/api/game/station/teams").then((d) => { if (!d.error) TEAMS = d; tekenScene(); tekenRace(); }).catch(() => {});
@@ -44,6 +44,7 @@ async function boot() {
     BOTS = (d && d.setups) || {}; document.getElementById("g-bots-status").textContent = d.error ? "station niet bereikbaar" : "uit CBR Station (v3_demo_orders)";
     tekenAlles(); }).catch(() => {});
   bouwFilters(); bouwToggles(); tekenAlles(); tekenTeLoggen(); scenelus();
+  if (typeof extraBoot === "function") extraBoot();                                    // game2.js: simulaties, gemist, nieuws, cockpit
   document.querySelectorAll(".g-paneel, .g-kpis").forEach((el, i) => { el.style.animationDelay = (i * 70) + "ms"; el.classList.add("g-boot"); });
   document.getElementById("g-voet").textContent = `Game mode · ${ALLE.length} trades uit MetaTrader · klassiek overzicht via de knop KLASSIEK bovenin`;
 }
@@ -107,7 +108,9 @@ function tekenAlles() {
   if (tel) { tel.textContent = `${T.length} VAN ${ALLE.length} TRADES`; if (vorigN !== T.length) { tel.classList.remove("wiebel"); void tel.offsetWidth; tel.classList.add("wiebel"); } vorigN = T.length; }
   tekenHud(); tekenKpi(T); tekenSaldo(T); tekenOntleed(T); tekenHeat(T); tekenMfe(T); tekenLiggen(T); tekenBeheer(T); tekenBots(T);
   tekenBadges(); tekenKal(); tekenTrades(T); tekenScene();
+  for (const f of NA_TEKENEN) { try { f(T); } catch (e) { console.error(e); } }      // game2.js: voorstellen 1-10
 }
+const NA_TEKENEN = [];                                                                   // game2.js zet hier zijn panelen in
 
 /* ------------------------------------------------------------------ HUD + XP */
 function xp() {
@@ -128,7 +131,8 @@ function tekenHud() {
     `<span class="vak">WEEK <b class="${som(wk, "r") >= 0 ? "g-pos" : "g-neg"}">${plusR(som(wk, "r"))}</b></span>` +
     `<span class="vak">REEKS <b>${rk.soort === "w" ? "🔥 " + rk.n + "x WIN" : rk.soort === "v" ? rk.n + "x VERLIES" : "-"}</b></span>` +
     `<span class="vak">LEVEL <b>${x.lvl}</b> <span class="xp"><i style="width:${x.pct}%"></i></span> <b>${x.p} XP</b></span>` +
-    (OPEN.length ? `<a class="vak" href="/#te-loggen">! ${OPEN.length} TE LOGGEN</a>` : `<span class="vak">ALLES GELOGD <b>✓</b></span>`);
+    (OPEN.length ? `<a class="vak" href="/#te-loggen">! ${OPEN.length} TE LOGGEN</a>` : `<span class="vak">ALLES GELOGD <b>✓</b></span>`) +
+    (typeof cockpitHtml === "function" ? cockpitHtml() : "");
 }
 function reeks() { let n = 0, s = null; for (let i = ALLE.length - 1; i >= 0; i--) { const w = ALLE[i].r > 0 ? "w" : ALLE[i].r < 0 ? "v" : null; if (!w) continue; if (!s) s = w; if (w !== s) break; n++; } return { soort: s, n }; }
 
@@ -363,9 +367,10 @@ function tekenKal() {
   el.querySelectorAll("[data-k]").forEach((b) => b.onclick = () => { const d = new Date(j, m - 1 + +b.dataset.k, 1); kalMaand = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; tekenKal(); });
 }
 function tekenTrades(T) {
-  document.getElementById("g-trades").innerHTML = `<div class="g-tabelvak" style="max-height:420px"><table class="g-t"><tr><th>#</th><th>DATUM</th><th>TIJD</th><th>RICHTING</th><th>GRADE</th><th>EMOTIE</th><th>EXIT</th><th>BOTS</th><th class="n">R</th><th class="n">€</th></tr>` +
+  const kans = (t) => { const b = BOTS[t.v3_sleutel]; const x = b && (b.uitdager || b.kampioen); return x && x.kans != null ? Math.round(100 * x.kans) + "%" : "-"; };
+  document.getElementById("g-trades").innerHTML = `<div class="g-tabelvak" style="max-height:420px"><table class="g-t"><tr><th>#</th><th>DATUM</th><th>TIJD</th><th>RICHTING</th><th>GRADE</th><th>EMOTIE</th><th>EXIT</th><th>BOTS</th><th class="n" title="modelkans van de bots op deze setup (tweede mening)">KANS</th><th class="n">R</th><th class="n">€</th></tr>` +
     T.slice().reverse().map((t) => `<tr class="klik" data-id="${t.id}"><td class="g-dim">${t.id}</td><td>${kort(t.datum)}</td><td>${esc(t.tijd)}</td><td>${t.richting === "long" ? "▲ LONG" : "▼ SHORT"}</td>
-      <td class="g-gold">${esc(t.grade)}</td><td>${esc(t.emotie)}</td><td>${esc(t.exit)}</td><td class="g-dim">${esc(botKlasse(t).replace("bots ", ""))}</td>
+      <td class="g-gold">${esc(t.grade)}</td><td>${esc(t.emotie)}</td><td>${esc(t.exit)}</td><td class="g-dim">${esc(botKlasse(t).replace("bots ", ""))}</td><td class="n g-cyan">${kans(t)}</td>
       <td class="n ${t.r >= 0 ? "g-pos" : "g-neg"}">${plusR(t.r)}</td><td class="n ${t.netto >= 0 ? "g-pos" : "g-neg"}">${eur(t.netto)}</td></tr>`).join("") + `</table></div>`;
   document.getElementById("g-trades").onclick = (ev) => { const r = ev.target.closest("tr[data-id]"); if (r) replay(+r.dataset.id); };
 }
