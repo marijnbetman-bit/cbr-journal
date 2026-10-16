@@ -3,8 +3,10 @@ Edge-analyse (fase 5).
 
 Beantwoordt de vraag die winrate niet beantwoordt: verdient dit model geld?
 
-- R per trade: netto resultaat gedeeld door het risico van die trade.
-- Expectancy: wat je gemiddeld per trade verdient, in R. Kosten zitten erin.
+- R per trade (16 okt 2026, Marijn): R = RR. Koersbeweging gedeeld door de SL-afstand, los van lotgrootte en kosten:
+  1 euro risico en 1 euro winst = +1R, ook als je meerdere posities met een andere lot opent. Euro's (netto, met kosten)
+  blijven apart gemeten.
+- Expectancy: wat je gemiddeld per trade haalt, in R (zonder kosten; die staan apart in euro's en in kosten_r).
 - Profit factor: bruto winst gedeeld door bruto verlies.
 - Drawdown: grootste terugval van piek naar dal, en hoeveel trades herstel kostte.
 - Criterium-edge: welk van de vijf criteria daadwerkelijk geld oplevert.
@@ -31,33 +33,60 @@ def _netto(t):
     return (t.get("resultaat_eur") or 0) + (t.get("charges") or 0)
 
 
+_REF = {"t": 0, "per_lot": None, "sl": None}
+
+
+def _referentie():
+    """Voor trades zonder SL maar met een lotgrootte: euro per prijseenheid per lot en je gebruikelijke SL-afstand
+    (mediaan van je trades met prijzen). Eén keer per 10 minuten uit de database."""
+    import time
+    if time.time() - _REF["t"] < 600:
+        return _REF
+    _REF["t"] = time.time()
+    try:
+        from . import db
+        with db.get_conn() as con:
+            rij = con.execute("SELECT risico_eur, entry_prijs, COALESCE(sl_start, sl_prijs), lot FROM trades WHERE risico_eur > 0 AND lot > 0 "
+                              "AND entry_prijs IS NOT NULL AND COALESCE(sl_start, sl_prijs) IS NOT NULL AND verwijderd_op IS NULL").fetchall()
+        w = sorted(r[0] / (abs(r[1] - r[2]) * r[3]) for r in rij if abs(r[1] - r[2]) > 0)
+        a = sorted(abs(r[1] - r[2]) for r in rij if abs(r[1] - r[2]) > 0)
+        _REF["per_lot"] = w[len(w) // 2] if w else None
+        _REF["sl"] = a[len(a) // 2] if a else None
+    except Exception:
+        pass
+    return _REF
+
+
 def r_van_trade(t):
     """
-    (R, herkomst). Herkomst: 'gemeten' (risk ingevuld), 'afgeleid' (uit RR en
-    resultaat) of 'geschat' (grofste terugval).
+    (R, herkomst). R = RR: koersbeweging / SL-afstand (16 okt 2026). Herkomst: 'gemeten' (MT5 of prijzen),
+    'afgeleid' (uit RR of risico in euro, zonder kosten) of 'geschat' (geen SL bekend).
     """
-    res = t.get("resultaat_eur") or 0
-    netto = _netto(t)
-    # MT5 levert de echte, puntengebaseerde R aan (resultaat_r): een SL is -1,0R,
-    # een handmatig gesloten trade de werkelijke afstand/SL-afstand. Dat is de
-    # waarheid en houdt alle R-cijfers consistent (expectancy, equity-R, RR per
-    # trade en "R laten liggen"). Alleen oudere trades zonder MT5-R vallen terug.
+    res = t.get("resultaat_eur") or 0                    # bruto: kosten tellen niet mee in R
+    # MT5 levert de puntengebaseerde R (resultaat_r): beweging / SL-afstand, een SL is -1,0R.
     if t.get("resultaat_r") is not None:
         return t["resultaat_r"], "gemeten"
+    e, x = t.get("entry_prijs"), t.get("exit_prijs")
+    sl = t.get("sl_start") or t.get("sl_prijs")          # de eerste SL: daar hoort je risico bij
+    if e and x and sl and abs(e - sl) > 0:
+        beweging = (x - e) if t.get("richting") == "long" else (e - x)
+        return round(beweging / abs(e - sl), 2), "gemeten"
+    rr = t.get("rr")
+    if res > 0 and res <= 2 * abs(t.get("charges") or 0):
+        # (bijna) break-even: zonder prijzen niet te meten, 0R (15 okt 2026: anders werd +0,04 euro met RR 2,79 +2,79R)
+        return 0.0, "geschat"
     risk = t.get("risk_eur")
     if risk and risk > 0:
-        return netto / risk, "gemeten"
-    rr = t.get("rr")
-    if res > 0 and rr and res <= 2 * abs(t.get("charges") or 0):
-        # (bijna) break-even: winst / RR geeft een piepklein risico en kosten / piepklein risico een enorme R
-        # (15 okt 2026: +0,04 bruto, -0,26 kosten, RR 2,79 werd -15R). Dan 0R.
-        return 0.0, "geschat"
+        return round(res / risk, 2), "afgeleid"
+    if t.get("lot") and res:                              # wel een lot, geen SL: beweging / je gebruikelijke SL-afstand
+        ref = _referentie()
+        if ref["per_lot"] and ref["sl"]:
+            beweging = res / (ref["per_lot"] * float(t["lot"]))
+            return round(beweging / ref["sl"], 2), "geschat"
     if res > 0 and rr:
-        afgeleid_risk = res / rr          # winst / RR = wat je riskeerde
-        if afgeleid_risk > 0:
-            return netto / afgeleid_risk, "afgeleid"
+        return float(rr), "afgeleid"                      # winst met een bekende RR: TP geraakt = +RR
     if res > 0:
-        return float(rr or 1.0), "geschat"
+        return 1.0, "geschat"
     if res < 0:
         return -1.0, "geschat"
     return 0.0, "geschat"
