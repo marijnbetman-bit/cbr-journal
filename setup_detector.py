@@ -44,6 +44,7 @@ STANDAARD = {
     "eis_bos": True,              # False = geen break of structure nodig: entry direct na de sweep
     "bos_op_wick": False,         # True = een wick voorbij de pullback is genoeg (type 3 shift, Marijn 6 okt 2026); False = close
     "sweep_direct": False,        # True = de candle direct na de top mag de sweep zijn (pullback = de topcandle zelf)
+    "entry_direct": False,        # 16 okt 2026 (hypothese Marijn, alleen papier): True = instappen op de close van de BOS-candle, niet wachten op de retrace
     "entry_pct": 0.5,             # entry = pullback-niveau + pct x (sweep - pullback); 0.5 = midden, 0.3 = dichter bij de BOS        # 1 okt 2026: False = 50% van de impuls raken maakt de setup NIET meer ongeldig
 }
 
@@ -334,6 +335,18 @@ def volg_setup(bars, imp: Impuls, cfg, live=None) -> Setup:
                 s.status = "rijp"
                 _event(s, "rijp", tijd)
                 fase = "entry"
+                if cfg.get("entry_direct", False):         # direct na de BOS: markt op de close van de BOS-candle
+                    s.entry = round(_c(c), 2)
+                    risico = abs(s.sl - s.entry)
+                    if risico <= 0:
+                        s.status, s.reden = "vervallen", "close van de BOS-candle ligt voorbij de SL"
+                        _event(s, "vervallen", tijd)
+                        return s
+                    s.tp = round(s.entry - cfg["rr"] * risico if up else s.entry + cfg["rr"] * risico, 2)
+                    s.risico_points = round(risico / punt, 1)
+                    s.status, s.entry_tijd = "entry", tijd
+                    _event(s, "entry", tijd)
+                    fase = "loopt"                         # SL/TP pas vanaf de volgende candle (de entry is de close)
                 continue
             if k - sweep_k >= cfg["bos_max_candles"]:
                 s.status, s.reden = "vervallen", f"geen break of structure binnen {cfg['bos_max_candles']} min na de sweep"
