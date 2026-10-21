@@ -43,6 +43,11 @@ RUNTIME = {
     "match_na_min": 33,          # ... tot 33 min erna (30 candles orderduur + 3)
     "dagbeeld": True,            # elke handelsdag één vraag: bullish / bearish / range / geen
     "dagbeeld_tijd": "08:30",    # Amsterdamse tijd waarop de vraag komt (daarna: /bias)
+    # Zeef (21 okt 2026, Marijn: 'signalen moeten zuiverder'): korte of kleine expansies niet meer sturen. Op 203 oordelen
+    # (8-21 okt) gaf je onder 10 candles 0 van 46 keer A/B en onder 5x ATR 1 van 46. De rij wordt wel bewaard (bron 'zeef'),
+    # zodat het station alles blijft zien. None of 0 = die eis uit.
+    "zeef_min_exp_candles": 10,
+    "zeef_min_exp_atr": 5.0,
 }
 
 # 'label' = de samenvatting die het station leest: A/B/C (ja + grade), nee, niet_gezien. Sinds 8 okt 2026 komt hij uit de
@@ -425,6 +430,17 @@ def _rij_velden(k):
                 aangemaakt=datetime.now().isoformat(timespec="seconds"))
 
 
+def door_zeef(k, cfg):
+    """True als de kandidaat groot genoeg is om te melden (zie RUNTIME zeef_*)."""
+    x = k.get("kenmerken") or {}
+    mc, ma = cfg.get("zeef_min_exp_candles"), cfg.get("zeef_min_exp_atr")
+    if mc and (x.get("exp_candles") or 0) < mc:
+        return False
+    if ma and (x.get("exp_atr") or 0) < ma:
+        return False
+    return True
+
+
 def verwerk(con, kands, bars, nu_ts, cfg, stuur=True):
     """Nieuwe kandidaten binnen het venster opslaan en (vers) melden: één bericht per sweep. Geeft [groep] terug."""
     global _EERSTE_LIVE
@@ -437,8 +453,13 @@ def verwerk(con, kands, bars, nu_ts, cfg, stuur=True):
         if con.execute("SELECT 1 FROM v3_labels WHERE sleutel=?", (k["sleutel"],)).fetchone():
             continue
         v = _rij_velden(k)
+        if not door_zeef(k, cfg):                 # bewaren voor het station, niet sturen
+            v["bron"] = "zeef"
+            con.execute(f"INSERT INTO v3_labels ({', '.join(v)}) VALUES ({', '.join('?' * len(v))})", list(v.values()))
+            con.commit()
+            continue
         broer = con.execute("SELECT bericht_id, label, label_ts, bron FROM v3_labels WHERE groep=? "
-                            "ORDER BY id LIMIT 1", (v["groep"],)).fetchone()
+                            "AND COALESCE(bron, '') != 'zeef' ORDER BY id LIMIT 1", (v["groep"],)).fetchone()
         if broer is not None:                     # zelfde sweep: geen nieuw bericht, wel hetzelfde label
             v.update(bericht_id=broer["bericht_id"], label=broer["label"], label_ts=broer["label_ts"], bron=broer["bron"])
         con.execute(f"INSERT INTO v3_labels ({', '.join(v)}) VALUES ({', '.join('?' * len(v))})", list(v.values()))

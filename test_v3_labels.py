@@ -120,7 +120,13 @@ print(f"     {len(rijen)} kandidaten in het venster, {len(groepen)} sweeps, {len
 for r in rijen[:40]:
     print(f"     {r['tijd']} {r['trade']:5s} sweep {r['sweep']:.2f} entry {r['entry']:.2f} SL {r['sl']:.2f} groep {r['groep']} bericht {r['bericht_id']}")
 check(len(rijen) > 0 and not buiten, "alleen kandidaten binnen het venster opgeslagen")
-check(len(VERSTUURD) == len(groepen), f"één bericht per sweep ({len(VERSTUURD)} berichten, {len(groepen)} sweeps)")
+gemeld = {r["groep"] for r in rijen if r["bron"] != "zeef"}          # zeef (21 okt): kleine expansies niet sturen
+check(len(VERSTUURD) == len(gemeld), f"één bericht per sweep die door de zeef komt ({len(VERSTUURD)} berichten, {len(gemeld)} van {len(groepen)} sweeps)")
+zeef = [r for r in rijen if r["bron"] == "zeef"]
+check(zeef and all(V.door_zeef({"kenmerken": json.loads(r["kenmerken"])}, cfg) is False for r in zeef),
+      f"zeef: {len(zeef)} kleine expansies bewaard maar niet gestuurd")
+check(all(json.loads(r["kenmerken"])["exp_candles"] >= 10 and json.loads(r["kenmerken"])["exp_atr"] >= 5 for r in rijen if r["bron"] != "zeef"),
+      "alles wat gestuurd wordt heeft >= 10 candles en >= 5x ATR expansie")
 check(all(v["png"] and v["png"][:4] == b"\x89PNG" for v in VERSTUURD), "elk bericht heeft een grafiekje (PNG)")
 check(all([b["text"] for b in sum(v["knoppen"]["inline_keyboard"], [])] == ["✅ ja", "❌ nee", "👀 niet gezien"] for v in VERSTUURD),
       "stap 1 onder elk nieuw bericht: ✅ ja | ❌ nee | 👀 niet gezien")
