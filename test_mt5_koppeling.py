@@ -70,7 +70,7 @@ class NepMT5:
     def initialize(self, *a): return True
     def shutdown(self): pass
     def last_error(self): return (0, "ok")
-    def account_info(self): return NS(login=12345678, server="VantageInternational-Live", currency="EUR")
+    def account_info(self): return NS(login=1705040, server="VantageInternational-Live", currency="EUR")
     def terminal_info(self): return NS(connected=True)
     def symbol_select(self, s, v): return True
     def symbol_info_tick(self, s): return NS(time=int(time.time()) + OFFSET * 3600)

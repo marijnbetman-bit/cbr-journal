@@ -16,7 +16,7 @@ sys.modules["marktdata"] = types.SimpleNamespace(          # niet in de echte ma
 import mt5_koppeling as mk
 from test_mt5_koppeling import NepMT5
 
-LIVE, DEMO = 12345678, 99999999
+LIVE, DEMO = mk.TOEGESTAAN_LOGIN, 99999999
 
 
 class Nep(NepMT5):
@@ -77,7 +77,7 @@ def main():
     check(isinstance(fout, mk.AccountFout), f"ronde stopt met AccountFout ({fout})")
     check(tellingen(db) == voor, "niets in de database veranderd (trades, saldo, posities, ...)")
     check(len(meldingen) == 1 and "VERKEERD" in meldingen[0], "één waarschuwing verstuurd")
-    check("999" in str(fout) and "678" in str(fout), "melding noemt verwacht en ingelogd (laatste 3 cijfers)")
+    check("999" in str(fout) and "040" in str(fout), "melding noemt verwacht en ingelogd (laatste 3 cijfers)")
     check(str(DEMO) not in str(fout) and str(LIVE) not in str(fout), "volledige accountnummers niet in de melding")
     ronde(k, cfg)
     check(len(meldingen) == 1, "tweede ronde: geen tweede waarschuwing")
@@ -108,11 +108,18 @@ def main():
     check(nep2.init_aanroepen == [(r"C:\Nergens\terminal64.exe",)],
           f"alleen met het pad geprobeerd, niet 'de MT5 die openstaat' ({nep2.init_aanroepen})")
 
-    print("5. zonder account_login: zoals vroeger, met waarschuwing")
+    print("5. zonder account_login in de config: toch alleen 1705040 (vast in de code)")
     k3 = mk.Koppeling(mt5=Nep(login=DEMO), db_pad=db)
+    voor = tellingen(db)
     _, fout = ronde(k3, dict(basis))
-    check(fout is None, "ronde loopt")
-    check("niet ingesteld" in (k3.status.get("account_controle") or ""), "status meldt: controle staat uit")
+    check(isinstance(fout, mk.AccountFout), f"demo zonder config geweigerd ({fout})")
+    check(tellingen(db) == voor, "niets in de database veranderd")
+    k3b = mk.Koppeling(mt5=Nep(login=DEMO), db_pad=db)
+    _, fout = ronde(k3b, dict(basis, account_login=DEMO))
+    check(isinstance(fout, mk.AccountFout), "ook als de config een ander account noemt: geweigerd")
+    k3c = mk.Koppeling(mt5=Nep(login=LIVE), db_pad=db)
+    _, fout = ronde(k3c, dict(basis))
+    check(fout is None, "1705040 zonder account_login in de config: loopt")
 
     print("6. account_login als tekst of als 12345678.0 werkt ook")
     for waarde in (str(LIVE), float(LIVE), f" {LIVE} "):

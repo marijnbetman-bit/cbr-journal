@@ -48,7 +48,7 @@ STANDAARD = {
     "symbool_bevat": "XAU",       # alleen trades op goud komen de journal in
     "broker_offset_uur": 3,       # reserve als de klok niet automatisch te bepalen is
     "terminal_pad": "",           # leeg = de MT5 die open staat; gezet = alleen die terminal
-    "account_login": "",          # je live-accountnummer; ander account ingelogd = niets loggen
+    "account_login": "",          # mag leeg; alleen TOEGESTAAN_LOGIN (1705040) wordt ooit gelogd
     "min_rr": 1.0,                # jouw RR-vloer, voor het TP-criterium
     "saldo_volgen": True,         # v2: journal-saldo altijd gelijk aan MT5-balans
     "match_marge_eur": 0.03,
@@ -457,6 +457,13 @@ class AccountFout(VerbindFout):
     """Er is een ander MT5-account ingelogd dan account_login: niets loggen."""
 
 
+# Het enige account dat de journal ooit mag lezen: Marijns live-account (Vantage).
+# Vast in de code, dus ook op een pc zonder (of met een oude) journal_config.json
+# komt er nooit meer een demo-account in. account_login in de config mag alleen
+# hetzelfde nummer zijn; een ander nummer = niets loggen.
+TOEGESTAAN_LOGIN = 1705040
+
+
 def _login_tekst(v):
     """account_login mag als getal of tekst in de config staan."""
     if isinstance(v, float) and v.is_integer():
@@ -536,16 +543,13 @@ class Koppeling:
         weer goed is, niet elke ronde."""
         if acc is None:
             raise VerbindFout("MT5 draait, maar er is geen account ingelogd.")
-        verwacht = _login_tekst(cfg.get("account_login"))
+        verwacht = _login_tekst(TOEGESTAAN_LOGIN)
         ingelogd = _login_tekst(getattr(acc, "login", ""))
-        if not verwacht:
-            self.status["account_controle"] = ("uit: account_login niet ingesteld in "
-                                               "journal_config.json")
-            if not self._zonder_controle_gemeld:
-                self._zonder_controle_gemeld = True
-                log("WAARSCHUWING: mt5 > account_login is niet ingesteld; de journal "
-                    "controleert niet welk account er ingelogd is")
-            return
+        in_config = _login_tekst(cfg.get("account_login"))
+        if in_config and in_config != verwacht and not self._zonder_controle_gemeld:
+            self._zonder_controle_gemeld = True
+            log(f"WAARSCHUWING: mt5 > account_login (…{in_config[-3:]}) is niet het "
+                f"toegestane account …{verwacht[-3:]}; de journal logt alleen …{verwacht[-3:]}")
         if ingelogd != verwacht:
             tekst = (f"VERKEERD MT5-ACCOUNT: verwacht …{verwacht[-3:]}, ingelogd "
                      f"…{ingelogd[-3:]} (server {getattr(acc, 'server', '?')}). Niets gelogd.")
