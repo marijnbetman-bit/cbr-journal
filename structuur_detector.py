@@ -208,6 +208,23 @@ def _vorig_uur(T, H, idx, sweep):
     return None if not hs else sweep > max(hs)
 
 
+def _vorige_1h_candle(T, H, idx, terug=6):
+    """High (wicks) van de laatste volle 1H-candle vóór het uur van candle idx: die range geldt het hele uur erna.
+    Is het vorige uur leeg (beursopening, dagpauze), dan het uur daarvoor, tot `terug` uur. None = geen data."""
+    uur = (int(T[idx]) // 3600) * 3600
+    q = idx - 1
+    while q >= 0 and int(T[q]) >= uur:
+        q -= 1
+    if q < 0 or int(T[q]) < uur - terug * 3600:
+        return None
+    start = (int(T[q]) // 3600) * 3600
+    m = None
+    while q >= 0 and int(T[q]) >= start:
+        m = H[q] if m is None else max(m, H[q])
+        q -= 1
+    return m
+
+
 def kandidaten(bars, cfg=None, vanaf_index=0):
     """Alle kandidaten (short en long) in volgorde van het orderindex, met kenmerken. Prijzen zijn echte prijzen."""
     c = _cfg(cfg)
@@ -237,6 +254,10 @@ def kandidaten(bars, cfg=None, vanaf_index=0):
             io = min(s["i_order"], len(T) - 1)
             ams = datetime.fromtimestamp(T[io], AMS)
             dag_extreem = dagmax[s["i_sweep"]]
+            # 27 okt 2026 (Marijn): de sweep moet de high (short) / low (long) van de vorige 1H-candle nemen, wicks tellen mee.
+            u1 = _vorige_1h_candle(T, Hs, s["i_sweep"])
+            k.update({"uur1_extreem": None if u1 is None else round(teken * u1, 5),
+                      "sweep_1h": None if u1 is None else teken * s["sweep"] > u1})
             k.update({"brak_1h": _vorig_uur(T, Hs, s["i_sweep"], teken * s["sweep"]),
                       "minuut_ams": ams.hour * 60 + ams.minute, "weekdag": ams.weekday(), "spread": SP[io],
                       "afstand_dag_extreem_points": None if dag_extreem is None else (teken * s["sweep"] - dag_extreem) / c["punt"]})

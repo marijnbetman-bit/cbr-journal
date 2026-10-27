@@ -88,6 +88,28 @@ def main():
     check("lopend en klaar zijn dezelfde setup (zelfde sleutel)", lp and lp[0]["sleutel"] == k["sleutel"])
     check("met lopend aan blijft de klare setup gelijk", [x["sleutel"] for x in SD.kandidaten(B, {"lopend": True}) if not x["lopend"]] == [k["sleutel"]])
 
+    # 27 okt 2026: sweep moet de vorige 1H-candle nemen (wicks tellen), die range geldt het hele uur erna
+    u = 1790002800                                        # een heel uur (epoch)
+    Tu = [u - 3600 + 60 * q for q in range(60)] + [u + 60 * q for q in range(60)]
+    Hu = [4010.0] * 60 + [4015.0] * 60
+    Hu[20] = 4020.0                                       # wick in het vorige uur
+    Hu[70] = 4030.0                                       # eigen uur telt niet mee
+    check("1H: high van het vorige uur incl. wick (4020), ook aan het eind van het uur",
+          SD._vorige_1h_candle(Tu, Hu, 61) == 4020.0 and SD._vorige_1h_candle(Tu, Hu, 119) == 4020.0)
+    gat = Tu[:30] + [u + 3600 + 60 * q for q in range(10)]   # vorig uur leeg (pauze): het uur daarvoor
+    check("1H: na een leeg uur de laatste volle 1H-candle", SD._vorige_1h_candle(gat, [4010.0] * 30 + [4000.0] * 10, 35) == 4010.0)
+    check("1H: geen data = None", SD._vorige_1h_candle(Tu[60:], Hu[60:], 5) is None)
+    for k_ in SD.kandidaten(B):
+        x = k_["kenmerken"]
+        check("1H: kenmerken uur1_extreem/sweep_1h aanwezig (%s)" % k_["trade"],
+              "uur1_extreem" in x and x["sweep_1h"] in (True, False, None))
+    import v3_labels as V
+    cfg = {"zeef_min_exp_candles": 0, "zeef_min_exp_atr": 0, "zeef_1h_sweep": True}
+    check("zeef: sweep boven 1H-high gaat door", V.door_zeef({"kenmerken": {"sweep_1h": True}}, cfg))
+    check("zeef: binnen de 1H-range niet", not V.door_zeef({"kenmerken": {"sweep_1h": False}}, cfg))
+    check("zeef: zonder 1H-data niet", not V.door_zeef({"kenmerken": {"sweep_1h": None}}, cfg))
+    check("zeef: eis uit = oude gedrag", V.door_zeef({"kenmerken": {"sweep_1h": False}}, dict(cfg, zeef_1h_sweep=False)))
+
     print("\nALLES GOED" if not fouten else "\n%d FOUT(EN)" % len(fouten))
     return 1 if fouten else 0
 

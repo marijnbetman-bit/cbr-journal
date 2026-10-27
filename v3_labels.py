@@ -48,6 +48,9 @@ RUNTIME = {
     # zodat het station alles blijft zien. None of 0 = die eis uit.
     "zeef_min_exp_candles": 10,
     "zeef_min_exp_atr": 5.0,
+    # 27 okt 2026 (Marijn: 'expansies meten, geen range'): alleen melden als de sweep de high/low van de vorige 1H-candle
+    # neemt (wicks tellen). Short alleen boven die high, long alleen onder die low. False = eis uit.
+    "zeef_1h_sweep": True,
 }
 
 # 'label' = de samenvatting die het station leest: A/B/C (ja + grade), nee, niet_gezien. Sinds 8 okt 2026 komt hij uit de
@@ -187,6 +190,12 @@ def tekst_signaal(r, aantal=1):
               f"sweep {_p(r['sweep'])} ({r['sweep_tijd']}) · BOS {r['bos_tijd']}",
               f"entry <b>{_p(r['entry'])}</b> · SL {_p(r['sl'])} · risico {abs(pts):.0f} pts",
               f"TP 1:1 {_p(r['tp_11'])} · 50% {_p(r['tp_50'])} (expansie vanaf {_p(r['begin'])}, {r['begin_tijd']})"]
+    try:
+        u1 = json.loads(r["kenmerken"] or "{}").get("uur1_extreem")
+    except (ValueError, TypeError, KeyError, IndexError):
+        u1 = None
+    if u1 is not None:
+        regels.append(f"1H {'high' if r['trade'] == 'short' else 'low'} {_p(u1)} geveegd")
     if aantal > 1:
         regels.append(f"<i>{aantal} orders bij deze sweep; je label geldt voor allemaal.</i>")
     regels.append("Zou jij deze nemen? Ja → grade · nee → reden(en). <i>Niet gezien = je keek op dat moment niet. "
@@ -320,7 +329,8 @@ def chart_kandidaat(bars, k):
     lijnen = [(k["geveegd"], "#8a8f98", "high", True), (k["structuur"], "#5aa9e6", "structuur", True),
               (k["sl"], "#ef5b5b", "SL", False), (k["entry"], "#f0f0f0", "entry", False),
               (k["tp_11"], "#3ecf8e", "TP 1:1", False), (k.get("tp_50"), "#3ecf8e", "TP 50%", True),
-              (k["begin"], "#c9a227", "begin", True)]
+              (k["begin"], "#c9a227", "begin", True),
+              ((k.get("kenmerken") or {}).get("uur1_extreem"), "#b07cff", "1H " + ("high" if k["trade"] == "short" else "low"), True)]
     mark = [(k["begin_tijd"], "#c9a227", "begin"), (k["sweep_tijd"], "#ff9f43", "sweep"),
             (k["bos_tijd"], "#5aa9e6", "BOS")]
     return chart_png(stuk, lijnen, mark, titel=f"v3 {k['trade'].upper()}")
@@ -437,6 +447,8 @@ def door_zeef(k, cfg):
     if mc and (x.get("exp_candles") or 0) < mc:
         return False
     if ma and (x.get("exp_atr") or 0) < ma:
+        return False
+    if cfg.get("zeef_1h_sweep") and x.get("sweep_1h") is not True:     # geen 1H-data = niet melden
         return False
     return True
 
