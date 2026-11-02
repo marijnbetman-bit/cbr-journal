@@ -374,6 +374,7 @@ const NAV = [
       { t: "Trading log", u: () => "/log", h: "l", i: "📒" },
       { t: "Kalender", u: () => "/kalender", h: "k", i: "🗓" },
       { t: "Weekrapport + PDF", u: () => "/week", h: "w", i: "📈" },
+      { t: "FTMO-account", u: () => "/ftmo", i: "🏁" },
     ],
   },
   {

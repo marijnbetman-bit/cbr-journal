@@ -1983,6 +1983,18 @@ except Exception as _e:                                  # pragma: no cover
     print("[journal] weekgetallen niet geladen:", _e)
 
 try:
+    # FTMO 1-Step (2 nov 2026): eigen pagina en tabellen, los van je live-journal; leest de FTMO-terminal in een apart proces
+    from ftmo_journal import router as _ftmo_router, start_achtergrond as _ftmo_start   # GET /api/ftmo
+    app.include_router(_ftmo_router)
+    _ftmo_start()
+
+    @app.get("/ftmo")
+    def ftmo_pagina():
+        return _pagina("ftmo.html")
+except Exception as _e:                                  # pragma: no cover
+    print("[journal] FTMO niet geladen:", _e)
+
+try:
     from foto_logboek import router as _foto_router      # /logboek/foto
     app.include_router(_foto_router)
 except Exception as _e:                                  # pragma: no cover

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FTMO-account — CBR Journal</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/donker.css" />
+  <style>
+    .ftmo-meter { height: 12px; border-radius: 6px; background: var(--border); overflow: hidden; margin: 8px 0 4px; }
+    .ftmo-meter > div { height: 100%; background: var(--green); }
+    .ftmo-meter > div.let { background: #d9a400; }
+    .ftmo-meter > div.gevaar { background: var(--red); }
+    .ftmo-twee { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    @media (max-width: 760px) { .ftmo-twee { grid-template-columns: 1fr; } }
+    .ftmo-tag { display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: 11px; border: 1px solid var(--border); }
+    .ftmo-tag.bot { border-color: var(--blue); color: var(--blue); }
+    .ftmo-wrap { overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <div id="hoofdnav"></div>
+  <div class="topbar">
+    <span style="color:var(--muted);font-size:13px;">FTMO 1-Step — jouw trades en die van de bot, los van je live-journal</span>
+    <div class="spacer"></div>
+    <span id="ftmoStatus" style="color:var(--muted);font-size:12px;"></span>
+  </div>
+
+  <div class="container">
+    <div id="kpi"></div>
+    <div class="ftmo-twee">
+      <div class="panel" id="dagGrens"></div>
+      <div class="panel" id="maxGrens"></div>
+    </div>
+    <div class="section-title">Bot tegen jij</div>
+    <div class="panel ftmo-wrap" id="perBron"></div>
+    <div class="section-title">Trades</div>
+    <div class="panel ftmo-wrap" id="trades"></div>
+    <p class="hint">R = koersbeweging gedeeld door de eerste SL-afstand (zoals in de rest van het journal). Bot = CBR Station (magic 26217021),
+      zelf = met de hand. FTMO-grenzen volgens de regels die we kennen (3% per dag vanaf 00:00, 10% totaal): controleer ze in je
+      FTMO-dashboard, dat is leidend.</p>
+  </div>
+
+  <script src="/static/common.js"></script>
+  <script src="/static/ftmo.js"></script>
+</body>
+</html>
